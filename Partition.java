@@ -6,13 +6,13 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedReader;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class BulkUploadUsingExcel {
     private static Logger logger = LoggerFactory.getLogger(BulkUploadUsingExcel.class);
@@ -21,12 +21,12 @@ public class BulkUploadUsingExcel {
         logger.info("Starting Utility.....");
         try {
             String curlData = getCurlAsString();
-            Map<String, List<String>> samlDataMap = new HashMap<>();
-            Map<String, List<String>> oauthDataMap = new HashMap<>();
-            Map<String, List<String>> pingAccessDataMap = new HashMap<>();
+            Map<String, List<String>> samlDataMap = new HashMap<String, List<String>>();
+            Map<String, List<String>> oauthDataMap = new HashMap<String, List<String>>();
+            Map<String, List<String>> pingAccessDataMap = new HashMap<String, List<String>>();
             
             readDataFromExcel("C:\\Users\\ZKIAPMO.CORP\\Documents\\Excel Data Read\\SampleTestData.xlsx", samlDataMap, oauthDataMap, pingAccessDataMap);
-            
+
             processData(curlData, samlDataMap, "SAML");
             processData(curlData, oauthDataMap, "OAUTH");
             processData(curlData, pingAccessDataMap, "PingAccess");
@@ -40,19 +40,35 @@ public class BulkUploadUsingExcel {
 
     public static String getCurlAsString() throws Exception {
         ClassLoader classLoader = ClassLoader.getSystemClassLoader();
-        try (InputStream is = classLoader.getResourceAsStream("CurlData.txt")) {
+        InputStream is = null;
+        BufferedReader reader = null;
+        try {
+            is = classLoader.getResourceAsStream("CurlData.txt");
             if (is == null)
                 return null;
-            try (InputStreamReader isr = new InputStreamReader(is); BufferedReader reader = new BufferedReader(isr)) {
-                return reader.lines().collect(Collectors.joining(System.lineSeparator()));
+            reader = new BufferedReader(new InputStreamReader(is));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append(System.lineSeparator());
+            }
+            return sb.toString();
+        } finally {
+            if (reader != null) {
+                reader.close();
+            }
+            if (is != null) {
+                is.close();
             }
         }
     }
 
     public static void readDataFromExcel(String path, Map<String, List<String>> samlDataMap, Map<String, List<String>> oauthDataMap, Map<String, List<String>> pingAccessDataMap) {
-        try (FileInputStream fis = new FileInputStream(path)) {
+        FileInputStream fis = null;
+        try {
+            fis = new FileInputStream(path);
             Workbook wb = new XSSFWorkbook(fis);
-            Sheet sheet = wb.getSheet("Authtype");
+            Sheet sheet = wb.getSheet("Sheet1");
             Iterator<Row> iterator = sheet.iterator();
             while (iterator.hasNext()) {
                 Row currentRow = iterator.next();
@@ -67,22 +83,35 @@ public class BulkUploadUsingExcel {
                     String connectionId = connectionIdCell.getStringCellValue();
                     String authType = authTypeCell.getStringCellValue();
                     
-                    switch (authType) {
-                        case "SAML":
-                            samlDataMap.computeIfAbsent(selector, k -> new ArrayList<>()).add(connectionId);
-                            break;
-                        case "OAUTH":
-                            oauthDataMap.computeIfAbsent(selector, k -> new ArrayList<>()).add(connectionId);
-                            break;
-                        case "PingAccess":
-                            pingAccessDataMap.computeIfAbsent(selector, k -> new ArrayList<>()).add(connectionId);
-                            break;
+                    if ("SAML".equals(authType)) {
+                        addToMap(samlDataMap, selector, connectionId);
+                    } else if ("OAUTH".equals(authType)) {
+                        addToMap(oauthDataMap, selector, connectionId);
+                    } else if ("PingAccess".equals(authType)) {
+                        addToMap(pingAccessDataMap, selector, connectionId);
                     }
                 }
             }
         } catch (IOException e) {
             e.printStackTrace();
+        } finally {
+            if (fis != null) {
+                try {
+                    fis.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
+    }
+
+    private static void addToMap(Map<String, List<String>> map, String selector, String connectionId) {
+        List<String> list = map.get(selector);
+        if (list == null) {
+            list = new ArrayList<String>();
+            map.put(selector, list);
+        }
+        list.add(connectionId);
     }
 
     public static void processData(String curlData, Map<String, List<String>> dataMap, String authType) {
@@ -155,7 +184,7 @@ public class BulkUploadUsingExcel {
     }
 
     private static List<String> splitCurl(String curlCommand) {
-        List<String> matchList = new ArrayList<>();
+        List<String> matchList = new ArrayList<String>();
         Pattern regex = Pattern.compile("('[^']*')|(\"[^\"]*\")|(\\S+)");
         Matcher regexMatcher = regex.matcher(curlCommand);
         while (regexMatcher.find()) {
