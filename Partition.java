@@ -140,21 +140,25 @@ public class BulkUploadUsingExcel {
                     i++;
                 }
             }
-            URL urlobj = new URL(url);
-            HttpURLConnection connection = (HttpURLConnection) urlobj.openConnection();
-            connection.setRequestMethod(reqMethod);
-            connection.setDoOutput(true);
-            // Setting headers
-            String[] headerParts = headers.toString().split("\n");
-            for (String header : headerParts) {
-                String[] keyValue = header.split(": ");
-                connection.setRequestProperty(keyValue[0], keyValue[1]);
-            }
-            // Forming the Request body JSON Object
-            jsonData = modifyJsonData(jsonData, connectionIdList, selector);
-            connection.getOutputStream().write(jsonData.getBytes());
-            int responseCode = connection.getResponseCode();
-            logger.info("The response code: " + responseCode);
+            
+            List<List<String>> partitionedConnList = getPartitionedList(connectionIdList, 100);
+			for(List<String> connectIdList: partitionedConnList) {
+				URL urlobj = new URL(url);
+				HttpURLConnection connection = (HttpURLConnection) urlobj.openConnection();
+				connection.setRequestMethod(reqMethod);
+				connection.setDoOutput(true);
+				// Setting headers
+				String[] headerParts = headers.toString().split("\n");
+				for (String header : headerParts) {
+					String[] keyValue = header.split(": ");
+					connection.setRequestProperty(keyValue[0], keyValue[1]);
+				}
+				// Forming the Request body JSON Object
+				jsonData = modifyJsonData(jsonData, connectIdList, selector);
+				connection.getOutputStream().write(jsonData.getBytes());
+				int responseCode = connection.getResponseCode();
+				logger.info("The response code: " + responseCode);
+			}
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -198,4 +202,12 @@ public class BulkUploadUsingExcel {
         }
         return matchList;
     }
+    
+    private static List<List<String>> getPartitionedList(List<String> origList, int partitionSize) {
+		List<List<String>> partitions = new ArrayList<>();
+		for (int i = 0; i < origList.size(); i += partitionSize) {
+			partitions.add(origList.subList(i, Math.min(i + partitionSize, origList.size())));
+		}
+		return partitions;
+	}
 }
