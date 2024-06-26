@@ -158,6 +158,15 @@ public class BulkUploadUsingExcel {
 				connection.getOutputStream().write(jsonData.getBytes());
 				int responseCode = connection.getResponseCode();
 				logger.info("The response code: " + responseCode);
+				// Reading the response
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8"))) {
+                StringBuilder response = new StringBuilder();
+                String responseLine;
+                while ((responseLine = br.readLine()) != null) {
+                    response.append(responseLine.trim());
+                }
+                Logger.info("The response body: " + response.toString());
+            }
 			}
         } catch (Exception e) {
             e.printStackTrace();
