@@ -1,0 +1,85 @@
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.*;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.mockito.junit.MockitoJUnitRunner;
+
+@RunWith(MockitoJUnitRunner.class)
+public class ERDCClientTest {
+
+    @Mock
+    private ReferenceData referenceData;
+
+    @InjectMocks
+    private ERDCClient erdcClient;
+
+    @Before
+    public void setUp() {
+        MockitoAnnotations.initMocks(this);
+    }
+
+    @Test
+    public void testGetErdcFlagValue_successful() {
+        String pilotId = "testPilotId";
+        View view = mock(View.class);
+        ResultSet resultSet = mock(ResultSet.class);
+        ResultSetRow resultSetRow = mock(ResultSetRow.class);
+
+        when(referenceData.getInstance()).thenReturn(referenceData);
+        when(referenceData.openView(ERDCClient.VIEW_NAME, ERDCClient.VIEW_VERSION)).thenReturn(view);
+        when(view.retrieve(pilotId)).thenReturn(resultSet);
+        when(resultSet.isEmpty()).thenReturn(false);
+        when(resultSet.get(0)).thenReturn(resultSetRow);
+        when(resultSetRow.get(1)).thenReturn("1");
+
+        boolean result = erdcClient.getErdcFlagValue(pilotId);
+
+        assertTrue(result);
+    }
+
+    @Test
+    public void testGetErdcFlagValue_noData() {
+        String pilotId = "testPilotId";
+        View view = mock(View.class);
+        ResultSet resultSet = mock(ResultSet.class);
+
+        when(referenceData.getInstance()).thenReturn(referenceData);
+        when(referenceData.openView(ERDCClient.VIEW_NAME, ERDCClient.VIEW_VERSION)).thenReturn(view);
+        when(view.retrieve(pilotId)).thenReturn(resultSet);
+        when(resultSet.isEmpty()).thenReturn(true);
+
+        boolean result = erdcClient.getErdcFlagValue(pilotId);
+
+        assertFalse(result);
+    }
+
+    @Test
+    public void testGetErdcFlagValue_viewNotDefinedException() {
+        String pilotId = "testPilotId";
+
+        when(referenceData.getInstance()).thenReturn(referenceData);
+        when(referenceData.openView(ERDCClient.VIEW_NAME, ERDCClient.VIEW_VERSION)).thenThrow(new ViewNotDefinedException());
+
+        boolean result = erdcClient.getErdcFlagValue(pilotId);
+
+        assertFalse(result);
+    }
+
+    @Test
+    public void testGetErdcFlagValue_invalidSearchException() {
+        String pilotId = "testPilotId";
+
+        when(referenceData.getInstance()).thenReturn(referenceData);
+        when(referenceData.openView(ERDCClient.VIEW_NAME, ERDCClient.VIEW_VERSION)).thenThrow(new InvalidSearchException());
+
+        boolean result = erdcClient.getErdcFlagValue(pilotId);
+
+        assertFalse(result);
+    }
+}
