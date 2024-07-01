@@ -2,6 +2,8 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.util.List;
@@ -17,17 +19,20 @@ import org.glassfish.jersey.client.authentication.HttpAuthenticationFeature;
 
 public class YourClass {
 
-    private static final String TRUSTSTORE_PATH = "path_to_your/customTrustStore.jks";
-    private static final String TRUSTSTORE_PASSWORD = "truststore_password";
+    private static final String KEYSTORE_PATH = "src/main/resources/pakeystore";
+    private static final String PASSWORD_FILE_PATH = "src/main/resources/keystore.bin";
 
     private static int addIdsToSelector(List<String> list, String selectorName, String selector) {
         final String method = "addIdsToSelector";
         int status = 0;
         try {
-            // Load the custom trust store
+            // Read the keystore password
+            char[] keystorePassword = Files.readAllBytes(Paths.get(PASSWORD_FILE_PATH)).toString().toCharArray();
+
+            // Load the keystore
             KeyStore trustStore = KeyStore.getInstance(KeyStore.getDefaultType());
-            try (InputStream trustStream = new FileInputStream(TRUSTSTORE_PATH)) {
-                trustStore.load(trustStream, TRUSTSTORE_PASSWORD.toCharArray());
+            try (InputStream trustStream = new FileInputStream(KEYSTORE_PATH)) {
+                trustStore.load(trustStream, keystorePassword);
             }
 
             TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
