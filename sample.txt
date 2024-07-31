@@ -1,85 +1,72 @@
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
+let pollingInterval;
+let pollingInProgress = false;
+let cancelEvent = false;
+let ajaxRequest;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.junit.MockitoJUnitRunner;
-
-@RunWith(MockitoJUnitRunner.class)
-public class ERDCClientTest {
-
-    @Mock
-    private ReferenceData referenceData;
-
-    @InjectMocks
-    private ERDCClient erdcClient;
-
-    @Before
-    public void setUp() {
-        MockitoAnnotations.initMocks(this);
-    }
-
-    @Test
-    public void testGetErdcFlagValue_successful() {
-        String pilotId = "testPilotId";
-        View view = mock(View.class);
-        ResultSet resultSet = mock(ResultSet.class);
-        ResultSetRow resultSetRow = mock(ResultSetRow.class);
-
-        when(referenceData.getInstance()).thenReturn(referenceData);
-        when(referenceData.openView(ERDCClient.VIEW_NAME, ERDCClient.VIEW_VERSION)).thenReturn(view);
-        when(view.retrieve(pilotId)).thenReturn(resultSet);
-        when(resultSet.isEmpty()).thenReturn(false);
-        when(resultSet.get(0)).thenReturn(resultSetRow);
-        when(resultSetRow.get(1)).thenReturn("1");
-
-        boolean result = erdcClient.getErdcFlagValue(pilotId);
-
-        assertTrue(result);
-    }
-
-    @Test
-    public void testGetErdcFlagValue_noData() {
-        String pilotId = "testPilotId";
-        View view = mock(View.class);
-        ResultSet resultSet = mock(ResultSet.class);
-
-        when(referenceData.getInstance()).thenReturn(referenceData);
-        when(referenceData.openView(ERDCClient.VIEW_NAME, ERDCClient.VIEW_VERSION)).thenReturn(view);
-        when(view.retrieve(pilotId)).thenReturn(resultSet);
-        when(resultSet.isEmpty()).thenReturn(true);
-
-        boolean result = erdcClient.getErdcFlagValue(pilotId);
-
-        assertFalse(result);
-    }
-
-    @Test
-    public void testGetErdcFlagValue_viewNotDefinedException() {
-        String pilotId = "testPilotId";
-
-        when(referenceData.getInstance()).thenReturn(referenceData);
-        when(referenceData.openView(ERDCClient.VIEW_NAME, ERDCClient.VIEW_VERSION)).thenThrow(new ViewNotDefinedException());
-
-        boolean result = erdcClient.getErdcFlagValue(pilotId);
-
-        assertFalse(result);
-    }
-
-    @Test
-    public void testGetErdcFlagValue_invalidSearchException() {
-        String pilotId = "testPilotId";
-
-        when(referenceData.getInstance()).thenReturn(referenceData);
-        when(referenceData.openView(ERDCClient.VIEW_NAME, ERDCClient.VIEW_VERSION)).thenThrow(new InvalidSearchException());
-
-        boolean result = erdcClient.getErdcFlagValue(pilotId);
-
-        assertFalse(result);
-    }
+// Function to start polling
+function startTimer() {
+    pollingInterval = setInterval(function () {
+        if (pollingInProgress === true) {
+            console.log('PushToken: Existing polling is in progress');
+        } else {
+            checkPushStatus();
+        }
+    }, initialPollingInterval);
 }
+
+// Function to check the status of the push notification
+function checkPushStatus() {
+    pollingInProgress = true;
+    let url = "https://<%=hostURL%>" + "<%=formAction%>";
+    ajaxRequest = $.ajax({
+        url: url,
+        method: "POST",
+        data: {
+            action: "poll_notification"
+        },
+        error: function() {
+            pollingInProgress = false;
+        },
+        success: function(data, textStatus, jqXHR) {
+            pollingInProgress = false;
+            if (cancelEvent === 'CANCEL') {
+                return handleIAmUnableBtn();
+            }
+            let x = document.createElement('div');
+            x.innerHTML = data;
+            if (x.querySelector('#checkstatusvalidated') != null) {
+                $('#action').val('<%=OTPConstants.FORM_ACTION_OTP_VALIDATE%>');
+                $('#login').submit();
+                clearInterval(pollingInterval); // Stop polling when user signs in
+            }
+        },
+        complete: function(jqXHR, textStatus) {
+            pollingInProgress = false;
+        }
+    });
+}
+
+// Function to handle user clicking "OK" button
+function handleSubmit() {
+    if (ajaxRequest) {
+        ajaxRequest.abort(); // Cancel the ongoing AJAX request
+    }
+    clearInterval(pollingInterval); // Stop the polling interval
+    $("#pushbutton").prop("disabled", true);
+    formobj['action'].value = '<%=OTPConstants.FORM_ACTION_SECURITYCODE%>';
+    formobj.submit();
+}
+
+// Function to handle user clicking "I am unable to complete Authentication"
+function handleIAmUnableBtn() {
+    if (pollingInProgress === false) {
+        $("#authbtn").prop("disabled", true);
+        formobj['action'].value = 'otp_cancel';
+        formobj.submit();
+    } else {
+        cancelEvent = 'CANCEL';
+    }
+}
+
+// Attach event handler to the form submit button
+$("#pushbutton").on('click', handleSubmit);
