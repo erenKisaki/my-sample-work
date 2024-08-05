@@ -1,1 +1,93 @@
+<script>
+    setTimeout(function() {
+        var time = 59; // how long the timer will run (seconds)
+        var initialOffset = '628';
+        var i = 1;
+        var interval;
+
+        // Need initial run as interval hasn't yet occurred...
+        $('#circle_animation').css('stroke-dashoffset', initialOffset - (1*(initialOffset/time)));
+        interval = setInterval(function() {
+            var timeLeft = time - i;
+            if (timeLeft <= 0) {
+                clearInterval(interval);
+                document.getElementById('timerLabel').innerHTML = "Time Expired";
+                window.location.replace('/bofaotp/ui/pushExpire');
+            } else {
+                timeLabel = timeLeft;
+            }
+            $('#time-remaining-number').text(timeLabel);
+            if (i == time) {
+                clearInterval(interval);
+            }
+            $('#circle_animation').css('stroke-dashoffset', initialOffset - ((i+1)*(initialOffset/time)));
+            i++;
+        }, 1000);
+
+        $("form").submit(function(event) {
+            clearInterval(interval); // Stop polling
+        });
+
+        // Add click event listeners to stop polling and allow form submission
+        $("#usbAuthBtn").click(function() {
+            clearInterval(interval); // Stop polling
+            $("#login").submit(); // Submit form
+        });
+
+        $("#authBtn").click(function() {
+            clearInterval(interval); // Stop polling
+            handleIAmUnableBtn(); // Call the unable to authenticate function
+        });
+
+    }, 0);
+
+    function checkPushStatus() {
+        pollingInprogress = true;
+        var url = "https://<%=hostURL%>"+"<%=formAction%>";
+
+        $.ajax({
+            url: url,
+            method: "POST",
+            data: {
+                action: "poll_notification"
+            },
+            error: function() {
+                pollingInprogress = false;
+            },
+            success: function(data, textStatus, jqXHR) {
+                pollingInprogress = false;
+                if (cancelEvent == "CANCEL") {
+                    return handleIAmUnableBtn();
+                }
+
+                var x = document.createElement('div');
+                x.innerHTML = data;
+
+                if ($(x).querySelector("#checkstatusvalidated") != null) {
+                    $('#action').val("<%=OTPConstants.FORM_ACTION_OTP_VALIDATE%>");
+                    $("#login").submit();
+                }
+            },
+            complete: function(jqXHR, textStatus) {
+                $(".btn").prop("disabled", false);
+                pollingInprogress = false;
+                if (isInitial) {
+                    clearInterval(interval);
+                    interval = setInterval(checkPushStatus, subsequentPollingInterval);
+                    isInitial = false;
+                }
+            }
+        });
+    }
+
+    function handleIAmUnableBtn() {
+        pollingInprogress = false;
+        $(".authbtn").prop("disabled", false);
+        var formObj = document.forms["login"];
+        formObj["action"].value = 'otp_cancel';
+        formObj.submit();
+        cancelEvent = "CANCEL";
+        clearInterval(interval);
+    }
+</script>
 
