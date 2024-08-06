@@ -1,29 +1,31 @@
-<div class="cashproContainer">
-<div class="cashpro-ping-header" id="cashpro-ping-header">
-<div>
-	<h1 class="cashProHeader">CashPro<sup>®</sup></h1><br>
-</div>
-</div>
-</div>
-
-cashproContainer {
-* 		     font-family: connections;		     font-size: 28px !important;     color: #012169;
-} 
-cashpro-ping-header {
-* 		     font-size: 22px;
-* 		     font-weight: 200;
-* 		     padding:  15px;
-* 		     max-width: 100%;
-* 		     margin-top: 80px;
-* 		     -webkit-border-radius:  0px;
-* 		    -moz-border-radius: 0px;
-* 		    -ms-border-radius: 0px;
-* 		     border-radius:  0px;
-
-}
-
-cashProHeader {
-* 		     font-size: 28px !important;
-* 		     color: #012169;
-* 		     font-family: connections;
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        .cashProHeader {
+            font-size: 28px !important;
+            color: #012169;
+            font-family: connections;
+            position: relative;
+        }
+        .cashProHeader::after {
+            content: "\00AE";
+            font-size: 0.6em;
+            vertical-align: super;
+            margin-left: 0.1em;
+        }
+    </style>
+    <title>CashPro</title>
+</head>
+<body>
+    <div class="cashproContainer">
+        <div class="cashpro-ping-header" id="cashpro-ping-header">
+            <div>
+                <h1 class="cashProHeader">CashPro</h1>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
