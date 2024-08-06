@@ -1,119 +1,29 @@
-<script>
-setTimeout(function() {
-    var time = 59; /* how long the timer will run (seconds) */
-    var initialOffset = '628';
-    var i = 1;
-    var displaytime = 59;
+<div class="cashproContainer">
+<div class="cashpro-ping-header" id="cashpro-ping-header">
+<div>
+	<h1 class="cashProHeader">CashPro<sup>®</sup></h1><br>
+</div>
+</div>
+</div>
 
-    /* Need initial run as interval hasn't yet occurred... */
-    $('#circle_animation').css('stroke-dashoffset', initialOffset - (1 * (initialOffset / time)));
+cashproContainer {
+* 		     font-family: connections;		     font-size: 28px !important;     color: #012169;
+} 
+cashpro-ping-header {
+* 		     font-size: 22px;
+* 		     font-weight: 200;
+* 		     padding:  15px;
+* 		     max-width: 100%;
+* 		     margin-top: 80px;
+* 		     -webkit-border-radius:  0px;
+* 		    -moz-border-radius: 0px;
+* 		    -ms-border-radius: 0px;
+* 		     border-radius:  0px;
 
-    var interval = setInterval(function() {
-        var timeleft = time - i;
-        var timeLabel = '0' + timeleft;
-        if (timeleft < 10) {
-            timeLabel = '0' + timeleft;
-        } else {
-            timeLabel = timeleft;
-        }
-        $('#time-remaining-number').text(timeLabel);
-        if (i == time) {
-            clearInterval(interval);
-            document.getElementById('timerlabel').innerHTML = "Time Expired";
-            window.location.replace("/bofaotp-ui/pushExpire");
-            return;
-        }
-        $('#circle_animation').css('stroke-dashoffset', initialOffset - ((i + 1) * (initialOffset / time)));
-        i++;
-    }, 1000);
-}, 0);
-
-$("form").submit(function() {
-    $(this).find(":submit").attr('disabled', 'disabled');
-});
-
-var interval;
-var isInitial = true;
-var initialPollingInterval = <%= initialPollingInterval %>;
-var subsequentPollingInterval = <%= subsequentPollingInterval %>;
-var cancelEvent = '';
-var pollingInprogress = false;
-
-if (initialPollingInterval === null || initialPollingInterval === undefined || initialPollingInterval == 0) {
-    initialPollingInterval = 10000; // 10 seconds
-} else {
-    initialPollingInterval = initialPollingInterval * 1000;
 }
 
-if (subsequentPollingInterval === null || subsequentPollingInterval === undefined || subsequentPollingInterval == 0) {
-    subsequentPollingInterval = 5000; // 5 seconds
-} else {
-    subsequentPollingInterval = subsequentPollingInterval * 1000;
+cashProHeader {
+* 		     font-size: 28px !important;
+* 		     color: #012169;
+* 		     font-family: connections;
 }
-
-function startTimer() {
-    interval = setInterval(function() {
-        if (pollingInprogress == true) {
-            console.log("PushToken: Existing polling is in progress");
-        } else {
-            checkPushStatus();
-        }
-    }, initialPollingInterval);
-}
-
-function checkPushStatus() {
-    pollingInprogress = true;
-    var url = "https://<%= hostURL %>" + "<%= formAction %>";
-    $.ajax({
-        url: url,
-        method: "POST",
-        data: {
-            action: "poll_notification"
-        },
-        error: function() {
-            pollingInprogress = false;
-        },
-        success: function(data, textStatus, jqXHR) {
-            pollingInprogress = false;
-            if (cancelEvent == 'CANCEL') {
-                return handleIAmUnableBtn();
-            }
-            var x = document.createElement('div');
-            x.innerHTML = data;
-            if (x.querySelector('#checkstatusvalidated') != null) {
-                $('#action').val('<%= OTPConstants.FORM_ACTION_OTP_VALIDATE %>');
-                $('#login').submit();
-            }
-        },
-        complete: function(jqXHR, textStatus) {
-            $('.btn').prop('disabled', false);
-            pollingInprogress = false;
-            if (isInitial) {
-                clearInterval(interval);
-                interval = setInterval(checkPushStatus, subsequentPollingInterval);
-                isInitial = false;
-            }
-        }
-    });
-}
-
-function handleIAmUnableBtn() {
-    if (pollingInprogress == false) {
-        $('#authbtn').prop('disabled', true);
-        var formObj = document.forms['login'];
-        formObj['action'].value = 'otp_cancel';
-        formObj.submit();
-    } else {
-        cancelEvent = 'CANCEL';
-    }
-}
-
-// Add event listeners for buttons to stop polling and submit form
-$(document).ready(function() {
-    $("#pushbutton, #authbtn").click(function() {
-        clearInterval(interval); // Stop polling
-        $("form#login").submit(); // Submit form to trigger the respective action
-    });
-});
-</script>
-
