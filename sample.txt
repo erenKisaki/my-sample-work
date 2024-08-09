@@ -1,31 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        .cashProHeader {
-            font-size: 28px !important;
-            color: #012169;
-            font-family: connections;
-            position: relative;
-        }
-        .cashProHeader::after {
-            content: "\00AE";
-            font-size: 0.6em;
-            vertical-align: super;
-            margin-left: 0.1em;
-        }
-    </style>
-    <title>CashPro</title>
-</head>
-<body>
-    <div class="cashproContainer">
-        <div class="cashpro-ping-header" id="cashpro-ping-header">
-            <div>
-                <h1 class="cashProHeader">CashPro</h1>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
+#assertion.getConditions().setNotBefore(#this.dateTime(2023, 5, 22, 19, 4, 46, 3)),
+#assertion.getConditions().setNotOnOrAfter(#this.dateTime(2023, 5, 22, 19, 14, 46, 3)),
+#assertion.getConditions().addAudienceRestriction(
+  new org.opensaml.saml2.core.impl.AudienceRestrictionBuilder().buildObject().with {
+    addAudience(new org.opensaml.saml2.core.impl.AudienceBuilder().buildObject().setAudienceURI('https://www.amazon.com'))
+  }
+),
+#assertion.getConditions().addCondition(new org.opensaml.saml2.core.impl.OneTimeUseBuilder().buildObject())
