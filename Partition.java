@@ -1,46 +1,40 @@
-import com.atlassian.bitbucket.server.rest.client.BitbucketClient;
-import com.atlassian.bitbucket.server.rest.client.api.RepositoryApi;
-import com.atlassian.bitbucket.server.rest.client.model.HttpAuthentication;
-import com.atlassian.bitbucket.server.rest.client.model.HttpBearerAuthentication;
-import com.atlassian.bitbucket.server.rest.client.model.Repository;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 
 import java.io.BufferedReader;
-import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.stream.Collectors;
 
-public class BitbucketExample {
+public class BitbucketRestClientExample {
+
     public static void main(String[] args) {
-        // Replace with your Bitbucket base URL
-        String bitbucketBaseUrl = "https://bitbucket.example.com";
-
-        // Replace with your HTTP access token
-        String accessToken = "your-access-token";
-
-        // Create a Bitbucket client using the access token
-        HttpAuthentication authentication = new HttpBearerAuthentication(accessToken);
-        BitbucketClient bitbucketClient = new BitbucketClient(bitbucketBaseUrl, authentication);
-
-        // Define repository details
+        String baseUrl = "https://bitbucket.example.com";
         String projectKey = "PROJECT_KEY";
         String repositorySlug = "repository-slug";
         String filePath = "path/to/your/file.txt";
-        String branchOrCommit = "master"; // or a specific commit SHA
+        String branchOrCommit = "refs/heads/master"; // or a specific commit SHA
 
-        // Access the repository API
-        RepositoryApi repositoryApi = bitbucketClient.api().repositories();
+        String accessToken = "your-access-token";
+        String requestUrl = baseUrl + "/rest/api/1.0/projects/" + projectKey + "/repos/" + repositorySlug + "/raw/" + filePath + "?at=" + branchOrCommit;
 
-        // Get the repository
-        Repository repository = repositoryApi.get(projectKey, repositorySlug);
+        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+            HttpGet request = new HttpGet(requestUrl);
+            request.addHeader("Authorization", "Bearer " + accessToken);
 
-        // Get file content as InputStream
-        try (InputStream fileContent = repositoryApi.fileContent(repository, branchOrCommit, filePath);
-             BufferedReader reader = new BufferedReader(new InputStreamReader(fileContent, StandardCharsets.UTF_8))) {
-            
-            // Convert InputStream to String using BufferedReader
-            String content = reader.lines().collect(Collectors.joining("\n"));
-            System.out.println(content);
+            HttpResponse response = httpClient.execute(request);
+            int statusCode = response.getStatusLine().getStatusCode();
+
+            if (statusCode == 200) { // HTTP 200 OK
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(response.getEntity().getContent()))) {
+                    String content = reader.lines().collect(Collectors.joining("\n"));
+                    System.out.println("File content:\n" + content);
+                }
+            } else {
+                System.out.println("Failed to retrieve file content. HTTP error code: " + statusCode);
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
         }
