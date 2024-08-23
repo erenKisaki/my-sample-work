@@ -1,7 +1,20 @@
 <dependencies>
+    <!-- Apache HttpClient for making HTTP requests -->
     <dependency>
-        <groupId>com.atlassian.bitbucket.server</groupId>
-        <artifactId>bitbucket-rest</artifactId>
-        <version>1.0.0</version>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>httpclient</artifactId>
+        <version>4.5.13</version>
+    </dependency>
+
+    <!-- (Optional) SLF4J for logging -->
+    <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-api</artifactId>
+        <version>1.7.32</version>
+    </dependency>
+    <dependency>
+        <groupId>org.slf4j</groupId>
+        <artifactId>slf4j-simple</artifactId>
+        <version>1.7.32</version>
     </dependency>
 </dependencies>
