@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Base64;
 
 public class JFrogArtifactDownloader {
 
@@ -12,16 +13,19 @@ public class JFrogArtifactDownloader {
         String artifactUrl = "https://your-jfrog-url/path/to/artifact.jar"; // Replace with your JFrog artifact URL
         // Path where you want to save the file
         String localFilePath = "C:/path/to/save/artifact.jar"; // Replace with your local file path
+        // JFrog username and password
+        String username = "your-username"; // Replace with your JFrog username
+        String password = "your-password"; // Replace with your JFrog password
 
         try {
-            downloadArtifact(artifactUrl, localFilePath);
+            downloadArtifact(artifactUrl, localFilePath, username, password);
             System.out.println("Artifact downloaded successfully.");
         } catch (IOException e) {
             System.err.println("Failed to download the artifact: " + e.getMessage());
         }
     }
 
-    public static void downloadArtifact(String artifactUrl, String localFilePath) throws IOException {
+    public static void downloadArtifact(String artifactUrl, String localFilePath, String username, String password) throws IOException {
         HttpURLConnection connection = null;
         InputStream inputStream = null;
         FileOutputStream outputStream = null;
@@ -30,6 +34,11 @@ public class JFrogArtifactDownloader {
             URL url = new URL(artifactUrl);
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
+
+            // Add Basic Authentication header
+            String auth = username + ":" + password;
+            String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes());
+            connection.setRequestProperty("Authorization", "Basic " + encodedAuth);
 
             // Check the response code
             int responseCode = connection.getResponseCode();
