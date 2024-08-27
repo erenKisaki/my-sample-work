@@ -1,71 +1,30 @@
-import java.io.BufferedInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Base64;
 
-public class JFrogArtifactDownloader {
+public class ArtifactDownloader {
 
-    public static void main(String[] args) {
-        // URL of the JFrog artifact
-        String artifactUrl = "https://your-jfrog-url/path/to/artifact.jar"; // Replace with your JFrog artifact URL
-        // Path where you want to save the file
-        String localFilePath = "C:/path/to/save/artifact.jar"; // Replace with your local file path
-        // JFrog username and password
-        String username = "your-username"; // Replace with your JFrog username
-        String password = "your-password"; // Replace with your JFrog password
+    private void saveArtifactToFile(String arifactoryUrl) throws Exception {
+        URL repositoryUrl = new URL(arifactoryUrl);
+        HttpURLConnection connection = (HttpURLConnection) repositoryUrl.openConnection();
+        connection.addRequestProperty("X-JFrog-Art-Api", env.getProperty("arifactoryApiKey"));
+        connection.setRequestMethod("GET");
+        connection.connect();
 
-        try {
-            downloadArtifact(artifactUrl, localFilePath, username, password);
-            System.out.println("Artifact downloaded successfully.");
-        } catch (IOException e) {
-            System.err.println("Failed to download the artifact: " + e.getMessage());
-        }
-    }
+        try (InputStream inputStream = connection.getInputStream()) {
+            String fileName = "artifact-" + System.currentTimeMillis() + ".jar"; // Create a new file name with a timestamp
+            File outputFile = new File("src/main/resources/" + fileName);
 
-    public static void downloadArtifact(String artifactUrl, String localFilePath, String username, String password) throws IOException {
-        HttpURLConnection connection = null;
-        InputStream inputStream = null;
-        FileOutputStream outputStream = null;
-
-        try {
-            URL url = new URL(artifactUrl);
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-
-            // Add Basic Authentication header
-            String auth = username + ":" + password;
-            String encodedAuth = Base64.getEncoder().encodeToString(auth.getBytes());
-            connection.setRequestProperty("Authorization", "Basic " + encodedAuth);
-
-            // Check the response code
-            int responseCode = connection.getResponseCode();
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                // Open input stream from the connection
-                inputStream = new BufferedInputStream(connection.getInputStream());
-                // Open output stream to save the file locally
-                outputStream = new FileOutputStream(localFilePath);
-
-                byte[] buffer = new byte[1024];
+            try (FileOutputStream fileOutputStream = new FileOutputStream(outputFile)) {
+                byte[] buffer = new byte[4096];
                 int bytesRead;
+
                 while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, bytesRead);
+                    fileOutputStream.write(buffer, 0, bytesRead);
                 }
-            } else {
-                throw new IOException("Failed to download artifact. Server returned HTTP response code: " + responseCode);
             }
         } finally {
-            if (inputStream != null) {
-                inputStream.close();
-            }
-            if (outputStream != null) {
-                outputStream.close();
-            }
-            if (connection != null) {
-                connection.disconnect();
-            }
+            connection.disconnect();
         }
     }
 }
