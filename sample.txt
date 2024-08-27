@@ -1,30 +1,88 @@
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.nio.file.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.HashMap;
+import java.util.Map;
 
-public class ArtifactDownloader {
+public class UnzipUtility {
 
-    private void saveArtifactToFile(String arifactoryUrl) throws Exception {
-        URL repositoryUrl = new URL(arifactoryUrl);
-        HttpURLConnection connection = (HttpURLConnection) repositoryUrl.openConnection();
-        connection.addRequestProperty("X-JFrog-Art-Api", env.getProperty("arifactoryApiKey"));
-        connection.setRequestMethod("GET");
-        connection.connect();
+    private static final String ZIP_FILE = "src/main/resources/my-archive.zip";
+    private static final String OUTPUT_DIR = "src/main/resources/unzipped/";
 
-        try (InputStream inputStream = connection.getInputStream()) {
-            String fileName = "artifact-" + System.currentTimeMillis() + ".jar"; // Create a new file name with a timestamp
-            File outputFile = new File("src/main/resources/" + fileName);
-
-            try (FileOutputStream fileOutputStream = new FileOutputStream(outputFile)) {
-                byte[] buffer = new byte[4096];
-                int bytesRead;
-
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    fileOutputStream.write(buffer, 0, bytesRead);
-                }
-            }
-        } finally {
-            connection.disconnect();
+    public static void main(String[] args) {
+        try {
+            unzip(ZIP_FILE, OUTPUT_DIR);
+            processFiles(new File(OUTPUT_DIR));
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
+
+    public static void unzip(String zipFilePath, String destDirectory) throws IOException {
+        File destDir = new File(destDirectory);
+        if (!destDir.exists()) {
+            destDir.mkdirs();
+        }
+        try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFilePath))) {
+            ZipEntry entry = zis.getNextEntry();
+            while (entry != null) {
+                File newFile = newFile(destDir, entry);
+                if (entry.isDirectory()) {
+                    newFile.mkdirs();
+                } else {
+                    new File(newFile.getParent()).mkdirs();
+                    try (FileOutputStream fos = new FileOutputStream(newFile)) {
+                        int len;
+                        byte[] buffer = new byte[1024];
+                        while ((len = zis.read(buffer)) > 0) {
+                            fos.write(buffer, 0, len);
+                        }
+                    }
+                }
+                zis.closeEntry();
+                entry = zis.getNextEntry();
+            }
+        }
+    }
+
+    private static File newFile(File destinationDir, ZipEntry zipEntry) throws IOException {
+        File destFile = new File(destinationDir, zipEntry.getName());
+        String destDirPath = destinationDir.getCanonicalPath();
+        String destFilePath = destFile.getCanonicalPath();
+
+        if (!destFilePath.startsWith(destDirPath + File.separator)) {
+            throw new IOException("Entry is outside of the target dir: " + zipEntry.getName());
+        }
+
+        return destFile;
+    }
+
+    public static void processFiles(File dir) {
+        Map<String, String> adapters = new HashMap<>();
+        Map<String, String> policies = new HashMap<>();
+        Map<String, String> dataStores = new HashMap<>();
+
+        for (File file : dir.listFiles()) {
+            if (file.isDirectory()) {
+                processFiles(file);
+            } else {
+                if (file.getName().endsWith(".json")) {
+                    // Example: You can categorize based on the filename or content
+                    if (file.getName().contains("adapter")) {
+                        adapters.put(file.getName(), file.getAbsolutePath());
+                    } else if (file.getName().contains("policy")) {
+                        policies.put(file.getName(), file.getAbsolutePath());
+                    } else if (file.getName().contains("datastore")) {
+                        dataStores.put(file.getName(), file.getAbsolutePath());
+                    }
+                }
+            }
+        }
+
+        // Print the HashMaps to verify
+        System.out.println("Adapters: " + adapters);
+        System.out.println("Policies: " + policies);
+        System.out.println("DataStores: " + dataStores);
+    }
 }
