@@ -1,57 +1,88 @@
 import java.io.*;
-import java.util.*;
-import java.util.jar.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
-public class JarExtractor {
+public class UnzipUtility {
 
-    public static Map<String, List<Object>> extractJarContents(String jarFilePath) {
-        Map<String, List<Object>> folderToFileDataMap = new HashMap<>();
+    private static final String ZIP_FILE = "src/main/resources/my-archive.zip";
+    private static final String OUTPUT_DIR = "src/main/resources/unzipped/";
 
-        try (JarFile jarFile = new JarFile(jarFilePath)) {
-            Enumeration<JarEntry> entries = jarFile.entries();
-
-            while (entries.hasMoreElements()) {
-                JarEntry entry = entries.nextElement();
-
-                if (entry.isDirectory()) {
-                    folderToFileDataMap.put(entry.getName(), new ArrayList<>());
-                } else {
-                    String folderName = entry.getName().substring(0, entry.getName().lastIndexOf('/') + 1);
-                    List<Object> fileDataList = folderToFileDataMap.computeIfAbsent(folderName, k -> new ArrayList<>());
-
-                    try (InputStream inputStream = jarFile.getInputStream(entry)) {
-                        Object fileData = readInputStream(inputStream);
-                        fileDataList.add(fileData);
-                    }
-                }
-            }
+    public static void main(String[] args) {
+        try {
+            unzip(ZIP_FILE, OUTPUT_DIR);
+            processFiles(new File(OUTPUT_DIR));
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        return folderToFileDataMap;
     }
 
-    private static Object readInputStream(InputStream inputStream) throws IOException {
-        StringBuilder fileData = new StringBuilder();
-        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-        String line;
-        while ((line = reader.readLine()) != null) {
-            fileData.append(line).append("\n");
+    public static void unzip(String zipFilePath, String destDirectory) throws IOException {
+        File destDir = new File(destDirectory);
+        if (!destDir.exists()) {
+            destDir.mkdirs();
         }
-        return fileData.toString();
+        try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFilePath))) {
+            ZipEntry entry = zis.getNextEntry();
+            while (entry != null) {
+                File newFile = newFile(destDir, entry);
+                if (entry.isDirectory()) {
+                    newFile.mkdirs();
+                } else {
+                    // Create parent directories
+                    new File(newFile.getParent()).mkdirs();
+                    try (FileOutputStream fos = new FileOutputStream(newFile)) {
+                        int len;
+                        byte[] buffer = new byte[1024];
+                        while ((len = zis.read(buffer)) > 0) {
+                            fos.write(buffer, 0, len);
+                        }
+                    }
+                }
+                zis.closeEntry();
+                entry = zis.getNextEntry();
+            }
+        }
     }
 
-    public static void main(String[] args) {
-        String jarFilePath = "src/main/resources/yourfile.jar";
-        Map<String, List<Object>> folderToFileDataMap = extractJarContents(jarFilePath);
+    private static File newFile(File destinationDir, ZipEntry zipEntry) throws IOException {
+        File destFile = new File(destinationDir, zipEntry.getName());
+        String destDirPath = destinationDir.getCanonicalPath();
+        String destFilePath = destFile.getCanonicalPath();
 
-        // Example of how to print the contents of the map
-        folderToFileDataMap.forEach((folder, files) -> {
-            System.out.println("Folder: " + folder);
-            for (Object fileData : files) {
-                System.out.println("File Data: " + fileData);
+        if (!destFilePath.startsWith(destDirPath + File.separator)) {
+            throw new IOException("Entry is outside of the target dir: " + zipEntry.getName());
+        }
+
+        return destFile;
+    }
+
+    public static void processFiles(File dir) {
+        Map<String, String> adapters = new HashMap<>();
+        Map<String, String> policies = new HashMap<>();
+        Map<String, String> dataStores = new HashMap<>();
+
+        for (File file : dir.listFiles()) {
+            if (file.isDirectory()) {
+                processFiles(file);
+            } else {
+                if (file.getName().endsWith(".json")) {
+                    // Example: You can categorize based on the filename or content
+                    if (file.getName().contains("adapter")) {
+                        adapters.put(file.getName(), file.getAbsolutePath());
+                    } else if (file.getName().contains("policy")) {
+                        policies.put(file.getName(), file.getAbsolutePath());
+                    } else if (file.getName().contains("datastore")) {
+                        dataStores.put(file.getName(), file.getAbsolutePath());
+                    }
+                }
             }
-        });
+        }
+
+        // Print the HashMaps to verify
+        System.out.println("Adapters: " + adapters);
+        System.out.println("Policies: " + policies);
+        System.out.println("DataStores: " + dataStores);
     }
 }
