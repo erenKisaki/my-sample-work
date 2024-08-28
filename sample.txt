@@ -1,12 +1,11 @@
 import java.io.*;
 import java.util.*;
 import java.util.jar.*;
-import java.util.zip.*;
 
 public class JarExtractor {
 
-    public static Map<String, List<String>> extractJarContents(String jarFilePath) {
-        Map<String, List<String>> folderToFileDataMap = new HashMap<>();
+    public static Map<String, List<Object>> extractJarContents(String jarFilePath) {
+        Map<String, List<Object>> folderToFileDataMap = new HashMap<>();
 
         try (JarFile jarFile = new JarFile(jarFilePath)) {
             Enumeration<JarEntry> entries = jarFile.entries();
@@ -18,10 +17,10 @@ public class JarExtractor {
                     folderToFileDataMap.put(entry.getName(), new ArrayList<>());
                 } else {
                     String folderName = entry.getName().substring(0, entry.getName().lastIndexOf('/') + 1);
-                    List<String> fileDataList = folderToFileDataMap.computeIfAbsent(folderName, k -> new ArrayList<>());
+                    List<Object> fileDataList = folderToFileDataMap.computeIfAbsent(folderName, k -> new ArrayList<>());
 
                     try (InputStream inputStream = jarFile.getInputStream(entry)) {
-                        String fileData = readInputStream(inputStream);
+                        Object fileData = readInputStream(inputStream);
                         fileDataList.add(fileData);
                     }
                 }
@@ -33,7 +32,7 @@ public class JarExtractor {
         return folderToFileDataMap;
     }
 
-    private static String readInputStream(InputStream inputStream) throws IOException {
+    private static Object readInputStream(InputStream inputStream) throws IOException {
         StringBuilder fileData = new StringBuilder();
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
         String line;
@@ -45,12 +44,12 @@ public class JarExtractor {
 
     public static void main(String[] args) {
         String jarFilePath = "src/main/resources/yourfile.jar";
-        Map<String, List<String>> folderToFileDataMap = extractJarContents(jarFilePath);
+        Map<String, List<Object>> folderToFileDataMap = extractJarContents(jarFilePath);
 
         // Example of how to print the contents of the map
         folderToFileDataMap.forEach((folder, files) -> {
             System.out.println("Folder: " + folder);
-            for (String fileData : files) {
+            for (Object fileData : files) {
                 System.out.println("File Data: " + fileData);
             }
         });
