@@ -1,88 +1,51 @@
-import java.io.*;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
+import org.json.JSONObject;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
-public class UnzipUtility {
+public static void processFiles(File dir, String regionName) {
+    Map<String, JSONObject> adapters = new HashMap<>();
+    Map<String, JSONObject> policies = new HashMap<>();
+    Map<String, JSONObject> datastores = new HashMap<>();
+    Map<String, JSONObject> selectors = new HashMap<>();
 
-    private static final String ZIP_FILE = "src/main/resources/my-archive.zip";
-    private static final String OUTPUT_DIR = "src/main/resources/unzipped/";
+    for (File file : dir.listFiles()) {
+        if (file.isDirectory()) {
+            processFiles(file, regionName);
+        } else {
+            if (file.getName().endsWith(".json")) {
+                try {
+                    String content = new String(Files.readAllBytes(Paths.get(file.getAbsolutePath())));
+                    JSONObject jsonObject = new JSONObject(content);
 
-    public static void main(String[] args) {
-        try {
-            unzip(ZIP_FILE, OUTPUT_DIR);
-            processFiles(new File(OUTPUT_DIR));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public static void unzip(String zipFilePath, String destDirectory) throws IOException {
-        File destDir = new File(destDirectory);
-        if (!destDir.exists()) {
-            destDir.mkdirs();
-        }
-        try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFilePath))) {
-            ZipEntry entry = zis.getNextEntry();
-            while (entry != null) {
-                File newFile = newFile(destDir, entry);
-                if (entry.isDirectory()) {
-                    newFile.mkdirs();
-                } else {
-                    // Create parent directories
-                    new File(newFile.getParent()).mkdirs();
-                    try (FileOutputStream fos = new FileOutputStream(newFile)) {
-                        int len;
-                        byte[] buffer = new byte[1024];
-                        while ((len = zis.read(buffer)) > 0) {
-                            fos.write(buffer, 0, len);
-                        }
+                    if (file.getAbsolutePath().contains("adapters/" + regionName)) {
+                        adapters.put(file.getName(), jsonObject);
+                    } else if (file.getAbsolutePath().contains("policies/" + regionName)) {
+                        policies.put(file.getName(), jsonObject);
+                    } else if (file.getAbsolutePath().contains("datastores/" + regionName)) {
+                        datastores.put(file.getName(), jsonObject);
+                    } else if (file.getAbsolutePath().contains("selectors/" + regionName)) {
+                        selectors.put(file.getName(), jsonObject);
                     }
-                }
-                zis.closeEntry();
-                entry = zis.getNextEntry();
-            }
-        }
-    }
-
-    private static File newFile(File destinationDir, ZipEntry zipEntry) throws IOException {
-        File destFile = new File(destinationDir, zipEntry.getName());
-        String destDirPath = destinationDir.getCanonicalPath();
-        String destFilePath = destFile.getCanonicalPath();
-
-        if (!destFilePath.startsWith(destDirPath + File.separator)) {
-            throw new IOException("Entry is outside of the target dir: " + zipEntry.getName());
-        }
-
-        return destFile;
-    }
-
-    public static void processFiles(File dir) {
-        Map<String, String> adapters = new HashMap<>();
-        Map<String, String> policies = new HashMap<>();
-        Map<String, String> dataStores = new HashMap<>();
-
-        for (File file : dir.listFiles()) {
-            if (file.isDirectory()) {
-                processFiles(file);
-            } else {
-                if (file.getName().endsWith(".json")) {
-                    // Example: You can categorize based on the filename or content
-                    if (file.getName().contains("adapter")) {
-                        adapters.put(file.getName(), file.getAbsolutePath());
-                    } else if (file.getName().contains("policy")) {
-                        policies.put(file.getName(), file.getAbsolutePath());
-                    } else if (file.getName().contains("datastore")) {
-                        dataStores.put(file.getName(), file.getAbsolutePath());
-                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             }
         }
-
-        // Print the HashMaps to verify
-        System.out.println("Adapters: " + adapters);
-        System.out.println("Policies: " + policies);
-        System.out.println("DataStores: " + dataStores);
     }
+
+    // Print the HashMaps to verify
+    if (adapters.size() > 0) {
+        System.out.println("Adapters for " + regionName + ": " + adapters);
+    }
+    if (policies.size() > 0) {
+        System.out.println("Policies for " + regionName + ": " + policies);
+    }
+    if (datastores.size() > 0) {
+        System.out.println("Datastores for " + regionName + ": " + datastores);
+    }
+    if (selectors.size() > 0) {
+        System.out.println("Selectors for " + regionName + ": " + selectors);
+    }
+
+    // Iterate over the map and get the JSON file and call the service
 }
