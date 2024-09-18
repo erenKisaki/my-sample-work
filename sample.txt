@@ -1,28 +1,7 @@
-import jakarta.xml.bind.JAXBContext;
-import jakarta.xml.bind.JAXBException;
-import jakarta.xml.bind.Marshaller;
-import java.io.StringWriter;
-
-public class XMLUtils {
-
-    // Method to convert Java object (bean) to XML string
-    public static String toXML(Object obj) throws JAXBException {
-        // Create a new JAXB context for the given class type
-        JAXBContext context = JAXBContext.newInstance(obj.getClass());
-
-        // Create a marshaller for the class
-        Marshaller marshaller = context.createMarshaller();
-
-        // Optional: Format the XML output
-        marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
-
-        // Prepare StringWriter to hold the generated XML
-        StringWriter writer = new StringWriter();
-
-        // Marshal the Java object into the StringWriter
-        marshaller.marshal(obj, writer);
-
-        // Return the XML string
-        return writer.toString();
-    }
-}
+<body id="loginBody">
+    <script nonce="TD62ptvwvVg5dkfB">
+        document.addEventListener("DOMContentLoaded", function() {
+            autoSubmit();
+        });
+    </script>
+</body>
