@@ -1,51 +1,28 @@
-import org.json.JSONObject;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Marshaller;
+import java.io.StringWriter;
 
-public static void processFiles(File dir, String regionName) {
-    Map<String, JSONObject> adapters = new HashMap<>();
-    Map<String, JSONObject> policies = new HashMap<>();
-    Map<String, JSONObject> datastores = new HashMap<>();
-    Map<String, JSONObject> selectors = new HashMap<>();
+public class XMLUtils {
 
-    for (File file : dir.listFiles()) {
-        if (file.isDirectory()) {
-            processFiles(file, regionName);
-        } else {
-            if (file.getName().endsWith(".json")) {
-                try {
-                    String content = new String(Files.readAllBytes(Paths.get(file.getAbsolutePath())));
-                    JSONObject jsonObject = new JSONObject(content);
+    // Method to convert Java object (bean) to XML string
+    public static String toXML(Object obj) throws JAXBException {
+        // Create a new JAXB context for the given class type
+        JAXBContext context = JAXBContext.newInstance(obj.getClass());
 
-                    if (file.getAbsolutePath().contains("adapters/" + regionName)) {
-                        adapters.put(file.getName(), jsonObject);
-                    } else if (file.getAbsolutePath().contains("policies/" + regionName)) {
-                        policies.put(file.getName(), jsonObject);
-                    } else if (file.getAbsolutePath().contains("datastores/" + regionName)) {
-                        datastores.put(file.getName(), jsonObject);
-                    } else if (file.getAbsolutePath().contains("selectors/" + regionName)) {
-                        selectors.put(file.getName(), jsonObject);
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
+        // Create a marshaller for the class
+        Marshaller marshaller = context.createMarshaller();
 
-    // Print the HashMaps to verify
-    if (adapters.size() > 0) {
-        System.out.println("Adapters for " + regionName + ": " + adapters);
-    }
-    if (policies.size() > 0) {
-        System.out.println("Policies for " + regionName + ": " + policies);
-    }
-    if (datastores.size() > 0) {
-        System.out.println("Datastores for " + regionName + ": " + datastores);
-    }
-    if (selectors.size() > 0) {
-        System.out.println("Selectors for " + regionName + ": " + selectors);
-    }
+        // Optional: Format the XML output
+        marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, Boolean.TRUE);
 
-    // Iterate over the map and get the JSON file and call the service
+        // Prepare StringWriter to hold the generated XML
+        StringWriter writer = new StringWriter();
+
+        // Marshal the Java object into the StringWriter
+        marshaller.marshal(obj, writer);
+
+        // Return the XML string
+        return writer.toString();
+    }
 }
