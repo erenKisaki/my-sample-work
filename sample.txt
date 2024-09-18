@@ -1,7 +1,1 @@
-<body id="loginBody">
-    <script nonce="TD62ptvwvVg5dkfB">
-        document.addEventListener("DOMContentLoaded", function() {
-            autoSubmit();
-        });
-    </script>
-</body>
+\
