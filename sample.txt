@@ -1,20 +1,7 @@
-<build>
-  <plugins>
-    <plugin>
-      <groupId>org.apache.maven.plugins</groupId>
-      <artifactId>maven-shade-plugin</artifactId>
-      <version>3.2.4</version>
-      <executions>
-        <execution>
-          <phase>package</phase>
-          <goals>
-            <goal>shade</goal>
-          </goals>
-          <configuration>
-            <minimizeJar>true</minimizeJar>
-          </configuration>
-        </execution>
-      </executions>
-    </plugin>
-  </plugins>
-</build>
+index="aws_ead_prod" sourcetype="*" NOT sourcetype="aws:/aws/lambda/lambda-PGP-synthetic-lambda*"
+| rex "accountNumber\":\"(?<accountNumber>[^\"]+)\""
+| rex "userId\":\"(?<userId>[^\"]+)\""
+| rex "appid\":\"(?<appid>[^\"]+)\""
+| stats count as login_count by appid, userId
+| eval login_status = if(login_count > 1, "2 or more", "1")
+| table _time, appid, userId, login_count, login_status
