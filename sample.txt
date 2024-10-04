@@ -1,7 +1,12 @@
 index="aws_ead_prod" sourcetype="*" NOT sourcetype="aws:/aws/lambda/lambda-PGP-synthetic-lambda*"
 | rex "accountNumber\":\"(?<accountNumber>[^\"]+)\""
 | rex "userId\":\"(?<userId>[^\"]+)\""
-| rex "appid\":\"(?<appid>[^\"]+)\""
-| stats count as login_count by appid, userId
-| eval login_status = if(login_count > 1, "2 or more", "1")
-| table _time, appid, userId, login_count, login_status
+| rex "dob\":\"(?<dob>[^\"]+)\""
+| rex "firstname\":\"(?<firstname>[^\"]+)\""
+| rex "lastname\":\"(?<lastname>[^\"]+)\""
+| rex "displayedName\":\"(?<displayedName>[^\"]+)\""
+| rex "AccessToken\":\"(?<AccessToken>[^\"]+)\""
+| eval count_type = if(len(userId) > 0, "userId", if(len(accountNumber) > 0, "accountNumber", null))
+| eval count_value = if(count_type == "userId", 1, if(count_type == "accountNumber", 1, 0))
+| stats sum(count_value) as count by appid, userId, accountNumber, dob, firstname, lastname, displayedName, AccessToken, count_type, all_fields
+| table _time, appid, userId, accountNumber, dob, firstname, lastname, displayedName, AccessToken, count, count_type, all_fields
