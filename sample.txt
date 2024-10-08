@@ -1,12 +1,65 @@
-index="aws_ead_prod" sourcetype="*" NOT sourcetype="aws:/aws/lambda/lambda-PGP-synthetic-lambda*"
-| rex "accountNumber\":\"(?<accountNumber>[^\"]+)\""
-| rex "userId\":\"(?<userId>[^\"]+)\""
-| rex "dob\":\"(?<dob>[^\"]+)\""
-| rex "firstname\":\"(?<firstname>[^\"]+)\""
-| rex "lastname\":\"(?<lastname>[^\"]+)\""
-| rex "displayedName\":\"(?<displayedName>[^\"]+)\""
-| rex "AccessToken\":\"(?<AccessToken>[^\"]+)\""
-| eval count_type = if(len(userId) > 0, "userId", if(len(accountNumber) > 0, "accountNumber", null))
-| eval count_value = if(count_type == "userId", 1, if(count_type == "accountNumber", 1, 0))
-| stats sum(count_value) as count by appid, userId, accountNumber, dob, firstname, lastname, displayedName, AccessToken, count_type, all_fields
-| table _time, appid, userId, accountNumber, dob, firstname, lastname, displayedName, AccessToken, count, count_type, all_fields
+import boto3
+from botocore.exceptions import ClientError
+
+# Logger setup (you can use any logging framework or library)
+import logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+# DynamoDB client
+dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table('YOUR_DYNAMODB_TABLE')
+
+def send_invest_to_ckd(context, group_id):
+    logger.info(f"Inside the send_invest_to_ckd method for group_id: {group_id}")
+
+    check_decision_invest = CheckDecisionInvest()
+    envelope = get_envelope_data(context, group_id)
+
+    check_list = envelope.get_checks()
+
+    if check_list:
+        if envelope.is_tab3():
+            send_invest_for_tab3(context, group_id, check_list, envelope, check_decision_invest)
+        else:
+            send_invest_for_tab1(context, group_id, check_list, envelope, check_decision_invest)
+    else:
+        logger.info("There are no checks retrieved from DynamoDB to send the invest")
+
+def update_dynamo_item_by_group_id(context, transaction_id, decision):
+    logger.info(f"Inside the put_envelope_data method for transaction_id: {transaction_id}")
+    
+    try:
+        # DynamoDB update expression
+        update_expression = "SET decision = :decision"
+        expression_values = {':decision': decision}
+
+        response = table.update_item(
+            Key={'transaction_id': transaction_id},
+            UpdateExpression=update_expression,
+            ExpressionAttributeValues=expression_values
+        )
+
+        logger.info(f"Update successful for {transaction_id}")
+
+    except ClientError as ex:
+        logger.error(f"Error occurred while processing the putEnvelopeData method: {ex}")
+        raise
+
+class Envelope:
+    def get_checks(self):
+        # Your logic to fetch checks
+        pass
+
+    def is_tab3(self):
+        # Your logic to check if envelope is Tab3
+        pass
+
+class CheckDecisionInvest:
+    # Your class implementation
+    pass
+
+def get_envelope_data(context, group_id):
+    # Mock method to simulate envelope data retrieval
+    logger.info(f"Retrieving envelope data for group_id: {group_id}")
+    return Envelope()
