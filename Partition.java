@@ -1,22 +1,39 @@
-  public static void zipFolder(final Path sourceDirPath, Path zipFilePath) throws IOException {
-        try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFilePath.toFile()))) {
-            Files.walkFileTree(sourceDirPath, new SimpleFileVisitor<Path>() {
-                @Override
-                public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    // Get the relative path from the source directory
-                    Path relativePath = sourceDirPath.relativize(file);
-                    ZipEntry zipEntry = new ZipEntry(relativePath.toString().replace("\\", "/"));
-                    zos.putNextEntry(zipEntry);
-                    try (FileInputStream fis = new FileInputStream(file.toFile())) {
-                        byte[] buffer = new byte[1024];
-                        int len;
-                        while ((len = fis.read(buffer)) > 0) {
-                            zos.write(buffer, 0, len);
-                        }
-                    }
-                    zos.closeEntry();
-                    return FileVisitResult.CONTINUE;
-                }
-            });
-        }
-    }
+#!/bin/bash
+
+# Directory containing JSON files
+JSON_DIR=
+ENDPOINT=
+AUTH_TOKEN=
+HTTP_METHOD="PUT"
+
+if [[ ! -d "$JSON_DIR" ]]; then
+    echo "Error: Directory $JSON_DIR does not exist."
+    exit 1
+fi
+
+if [[ -z $(ls "$JSON_DIR"/*.json 2>/dev/null) ]]; then
+    echo "Error: No JSON files found in $JSON_DIR."
+    exit 1
+fi
+
+for json_file in "$JSON_DIR"/*.json; do
+    echo "Processing $json_file..."
+
+    if ! json_data=$(cat "$json_file"); then
+        echo "Error reading $json_file. Skipping."
+        continue
+    fi
+
+    response=$(curl -s -o /dev/null -w "%{http_code}" -X "$HTTP_METHOD" "$ENDPOINT" \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $AUTH_TOKEN" \
+        --data "$json_data")
+
+    if [[ "$response" -eq 200 ]]; then
+        echo "Successfully updated: $json_file"
+    else
+        echo "Failed to update $json_file. HTTP Status: $response"
+    fi
+done
+
+echo "All files processed."
