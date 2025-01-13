@@ -1,30 +1,33 @@
-package com.example.test;
+Feature: Community Role Creation for CSR
 
-import java.util.regex.Pattern;
-import java.util.regex.Matcher;
+  Scenario: Create a Read-Only Community Role for CSR
+    Given the LRA is successfully logged into the UMS application
+    And the LRA has navigated to the Community Role creation page
 
-public class CountryCodeExtractor {
+    When the LRA selects the option to create a new Community Role
+    Then the LRA should have two options to create a read-only role:
+      | Option                  | Permissions |
+      | Read-only Permission    | Read Retail, Read Commercial      |
+      | Role Without Actions    | Write Retail |
 
-    public static void main(String[] args) {
-        // Input: Address string
-        String address = "Chicago, IL US";
+    And the LRA completes and saves the role configuration
+    Then the system should confirm that the role has been created with the specified permissions or without any permissions
 
-        // Approach 1: Using String.split()
-        String[] parts = address.split(" "); // Split the address by spaces
-        String countryCodeFromSplit = parts[parts.length - 1]; // Last part is the country code
-        System.out.println("Country Code using split: " + countryCodeFromSplit);
 
-        // Approach 2: Using Regex
-        String regex = "\\b[A-Z]{2}\\b$"; // Regex to match exactly two uppercase letters at the end of the string
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(address);
+Feature: View a User as CSR with Read-only Permissions
 
-        String countryCodeFromRegex = "";
-        if (matcher.find()) {
-            countryCodeFromRegex = matcher.group();
-        } else {
-            countryCodeFromRegex = "No match found";
-        }
-        System.out.println("Country Code using regex: " + countryCodeFromRegex);
-    }
-}
+  Scenario: CSR views a user's profile with read-only permissions
+    Given the CSR user is successfully logged into the UMS application
+
+    When the CSR navigates to the Administration section
+    And the CSR clicks on the 'Search' tab on the manage user page
+    Then the UMS application redirects the CSR to the search user page
+
+    When the CSR searches for a user
+    And the system displays a list of search results
+    And the CSR selects the desired user from the search results
+    Then the CSR can view the selected user's profile
+
+    And the CSR can view all user information
+    But the action drop-down list is not displayed
+    Then no actions can be performed on the user
