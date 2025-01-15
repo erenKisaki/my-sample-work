@@ -1,91 +1,50 @@
-Success Test Cases
-CSR Successfully Logs In
+Given the LRA is logged into the UMS
+When the LRA creates a community role with the "activate user" action
+Then the role should be saved successfully
+And the role should include the "activate user" action
 
-Pre-condition: CSR credentials are valid.
-Steps:
-Enter valid username and password.
-Click "Login."
-Expected Result: CSR is logged into the UMS application and redirected to the dashboard.
-CSR Navigates to Administration Section
 
-Pre-condition: CSR is logged into the UMS application.
-Steps:
-Click the "Search" tab under Administration.
-Expected Result: CSR is redirected to the search user page.
-CSR Searches for a Valid User
+Given the LRA is logged into the UMS
+And a community role with the "activate user" action exists
+When the LRA assigns the role to a CSR user
+Then the CSR should be successfully assigned the role
 
-Pre-condition: The user exists in the system.
-Steps:
-Enter a valid search query in the search bar.
-Click "Search."
-Expected Result: Search results display users matching the query.
-CSR Selects a User
 
-Pre-condition: Search results are displayed.
-Steps:
-Click on the desired user's profile link.
-Expected Result: The selected user's profile is displayed.
-CSR Views User Profile with Read-only Permissions
+Given the CSR is assigned a role with the "activate user" action
+When the CSR logs into the UMS
+And the CSR searches for a customer
+Then the CSR should see the "activate user" action in the dropdown menu
+And the CSR should not see actions outside their assigned role
 
-Pre-condition: CSR has read-only permissions.
-Steps:
-Navigate through the user's profile sections.
-Expected Result: CSR can view all information without any "action" options available.
-CSR Cannot Perform Actions
+Given the CSR is assigned a role with the "activate user" action
+When the CSR attempts to perform an action outside their assigned role
+Then the action should not be executed
+And the CSR should see other actions disabled
 
-Pre-condition: CSR is assigned a role with no actionable permissions.
-Steps:
-Attempt to perform an action (e.g., edit, delete).
-Expected Result: The action drop-down list is not shown, and no modifications can be made.
-Failure Test Cases
-CSR Fails to Log In with Invalid Credentials
+Given the CSR is assigned a role with the "activate user" action
+And the LRA updates the role to include the "view user" action
+When the CSR logs into the UMS
+And the CSR searches for a customer
+Then the CSR should see both "activate user" and "view user" actions in the dropdown menu
 
-Pre-condition: CSR credentials are invalid.
-Steps:
-Enter incorrect username and/or password.
-Click "Login."
-Expected Result: System displays an error message, and login is denied.
-Navigation to Administration Section Fails
+Given the CSR is assigned a role with the "activate user" action
+And the CSR can visually see other actions in the dropdown
+When the CSR attempts to perform an unauthorized action
+Then the system should not execute the action
 
-Pre-condition: CSR has restricted navigation permissions.
-Steps:
-Attempt to click the "Search" tab.
-Expected Result: CSR receives an error or access denial message.
-Search Fails Due to Invalid Query
+Given multiple CSR users are assigned roles
+When they log in and perform their respective actions concurrently
+Then the system should respond without performance degradation
+And each CSR should only see the actions assigned to their role
 
-Pre-condition: Search query is invalid (e.g., special characters or invalid formats).
-Steps:
-Enter an invalid search query.
-Click "Search."
-Expected Result: System displays a "No results found" or validation error message.
-Search Fails for Non-existent User
+Given the LRA is logged into the UMS  
+And a role with the "activate user" action exists  
+When the LRA updates the role to include the "view user" action  
+Then the role should be updated successfully  
+And the changes should reflect immediately for the CSR users assigned to this role  
 
-Pre-condition: The user does not exist in the system.
-Steps:
-Enter a valid search query that matches no users.
-Click "Search."
-Expected Result: System displays a "User not found" message.
-CSR Cannot Access User Profile
-
-Pre-condition: CSR lacks permissions to view user profiles.
-Steps:
-Click on the user link in the search results.
-Expected Result: System denies access and displays a permissions error.
-Profile Data Fails to Load
-
-Pre-condition: The system encounters a server or database issue.
-Steps:
-Select a user from the search results.
-Expected Result: System displays a "Data could not be loaded" error.
-CSR Attempts Unauthorized Actions
-
-Pre-condition: CSR role is read-only.
-Steps:
-Attempt to perform an action (e.g., edit or delete).
-Expected Result: System displays a "Permission Denied" message, and the action is blocked.
-Search Page Fails to Load
-
-Pre-condition: CSR is on the administration page.
-Steps:
-Click the "Search" tab.
-Expected Result: System displays a "Page not found" or "Error loading page" message.
+Given the CSR is assigned a role with the "activate user" action  
+And the LRA modifies the role to include the "view user" action  
+When the CSR logs back into the UMS  
+And the CSR searches for a customer  
+Then the CSR should see both "activate user" and "view user" actions in the dropdown menu  
