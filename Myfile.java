@@ -1,52 +1,93 @@
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.Path;
-import java.io.InputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.stream.Stream;
-import org.apache.commons.io.IOUtils; // Ensure this import if you are using Apache Commons IO
+Feature: User Service API
+  As a developer, I want to ensure the User Service API behaves as expected for various requests.
+  
+  Scenario: Access Token validated success
+    Given the User Service API is running
+    When I send a GET request
+    Then the response status should be 403
+    And Error Saying Pass the Valid token
+	
+  Scenario: Invalid Data Passed for Service
+    Given the User Service API is running
+    When I send a GET request
+    Then the response status should be 400
+    And Error Saying Invalid input data for the fields 
+	
+	Scenario: Internal Server Error for service
+    Given the User Service API is running
+    When I send a GET request
+    Then the response status was be 500
+    And Error saying exception occured while retrieving the data  
 
-@GET
-@Path("image-conversion")
-public void convertAndStoreImage(String sharedPath) throws Exception {
-    try (Stream<java.nio.file.Path> paths = Files.walk(Paths.get("C:\\Git\\test"))) {
-        paths.filter(Files::isRegularFile).forEach(file -> {
-            InputStream inputStream = null;
-            try {
-                System.out.println(file.toString());
-                File initialFile = new File(file.toString());
-                inputStream = new FileInputStream(initialFile);
-                byte[] imageBytes = IOUtils.toByteArray(inputStream);
+  Scenario: Fetch users by username
+    Given the User Service API is running
+    When I send a GET request to "/users?username=testuser"
+    Then the response status should be 200
+    And the response should contain user(s) with "username=testuser"
 
-                // Convert the unknown byte array to a PDF byte array
-                byte[] pdfByteArray = PdfUtils.createPdfWithEmbeddedFile(imageBytes);
+  Scenario: Fetch users by first name
+    Given the User Service API is running
+    When I send a GET request to "/users?firstName=John"
+    Then the response status should be 200
+    And the response should contain user(s) with "firstName=John"
 
-                // Get the user's home directory
-                String userHome = System.getProperty("user.home");
-                File outputFolder = new File(userHome + File.separator + "output");
-                if (!outputFolder.exists()) {
-                    outputFolder.mkdirs();
-                }
+  Scenario: Fetch users by customer ID
+    Given the User Service API is running
+    When I send a GET request to "/users?customerId=12345"
+    Then the response status should be 200
+    And the response should contain user(s) with "customerId=12345"
 
-                // Specify the output path for the PDF
-                String outputPath = outputFolder.getPath() + File.separator + "output.pdf";
-                PdfUtils.writeBytesToPdf(pdfByteArray, outputPath);
-                System.out.println("PDF written to: " + outputPath);
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-            } finally {
-                if (inputStream != null) {
-                    try {
-                        inputStream.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        });
-    } catch (IOException e) {
-        e.printStackTrace();
-    }
-}
+  Scenario: Fetch users by last name
+    Given the User Service API is running
+    When I send a GET request to "/users?lastName=Doe"
+    Then the response status should be 200
+    And the response should contain user(s) with "lastName=Doe"
+
+  Scenario: Fetch users by Auth0 ID
+    Given the User Service API is running
+    When I send a GET request to "/users?auth0Id=auth123"
+    Then the response status should be 200
+    And the response should contain user(s) with "auth0Id=auth123"
+
+  Scenario: Fetch users by status
+    Given the User Service API is running
+    When I send a GET request to "/users?status=Active"
+    Then the response status should be 200
+    And the response should contain user(s) with "status=Active"
+
+  Scenario: Fetch users by country
+    Given the User Service API is running
+    When I send a GET request to "/users?country=USA"
+    Then the response status should be 200
+    And the response should contain user(s) with "country=USA"
+
+  Scenario: Fetch users by community
+    Given the User Service API is running
+    When I send a GET request to "/users?community=Community A"
+    Then the response status should be 200
+    And the response should contain user(s) with "community=Community A"
+
+  Scenario: Fetch users with multiple criteria
+    Given the User Service API is running
+    When I send a GET request to "/users?username=testuser&status=Active"
+    Then the response status should be 200
+    And the response should contain user(s) matching all criteria
+
+  Scenario: Handle invalid input
+    Given the User Service API is running
+    When I send a GET request to "/users?status=InvalidStatus"
+    Then the response status should be 400
+    And the response should contain an appropriate error message
+
+  Scenario: Handle no results
+    Given the User Service API is running
+    When I send a GET request to "/users?username=nonexistentuser"
+    Then the response status should be 200
+    And the response should contain an empty result set
+
+  Scenario: Handle server errors
+    Given the User Service API is running
+    When the database is unavailable
+    And I send a GET request to "/users"
+    Then the response status should be 500
+    And the response should contain an appropriate error message
