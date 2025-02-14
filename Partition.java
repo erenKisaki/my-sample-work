@@ -31,6 +31,9 @@ public class DocxToPdfExactOrder {
             if (element instanceof XWPFParagraph) {
                 XWPFParagraph paragraph = (XWPFParagraph) element;
 
+                contentStream.beginText();
+                contentStream.newLineAtOffset(margin, yPosition);
+
                 for (XWPFRun run : paragraph.getRuns()) {
                     PDFont font = fontRegular;
                     if (run.isBold()) font = fontBold;
@@ -38,24 +41,34 @@ public class DocxToPdfExactOrder {
 
                     contentStream.setFont(font, run.getFontSize() > 0 ? run.getFontSize() : 12);
                     contentStream.showText(run.text());
+
+                    // ✅ Handle images inside the paragraph
+                    for (XWPFPicture picture : run.getEmbeddedPictures()) {
+                        contentStream.endText();
+                        contentStream.close();
+
+                        XWPFPictureData pictureData = picture.getPictureData();
+                        byte[] imageBytes = pictureData.getData();
+                        BufferedImage bufferedImage = ImageIO.read(new ByteArrayInputStream(imageBytes));
+
+                        if (bufferedImage != null) {
+                            PDImageXObject image = LosslessFactory.createFromImage(pdf, bufferedImage);
+                            PDPageContentStream imageStream = new PDPageContentStream(pdf, page, PDPageContentStream.AppendMode.APPEND, true, true);
+                            imageStream.drawImage(image, margin, yPosition - 150, 150, 100);
+                            imageStream.close();
+                            yPosition -= 150;
+                        }
+
+                        contentStream = new PDPageContentStream(pdf, page, PDPageContentStream.AppendMode.APPEND, true, true);
+                        contentStream.beginText();
+                        contentStream.newLineAtOffset(margin, yPosition);
+                    }
                 }
 
-                contentStream.newLine();
+                contentStream.endText();
                 yPosition -= 20;
-
-                if (yPosition < 50) {
-                    contentStream.endText();
-                    contentStream.close();
-                    page = new PDPage();
-                    pdf.addPage(page);
-                    contentStream = new PDPageContentStream(pdf, page);
-                    contentStream.beginText();
-                    contentStream.newLineAtOffset(margin, page.getMediaBox().getHeight() - margin);
-                    yPosition = page.getMediaBox().getHeight() - margin;
-                }
             } 
             else if (element instanceof XWPFTable) {
-                contentStream.endText();
                 contentStream.close();
 
                 PDPageContentStream tableStream = new PDPageContentStream(pdf, page, PDPageContentStream.AppendMode.APPEND, true, true);
@@ -88,37 +101,15 @@ public class DocxToPdfExactOrder {
                 contentStream = new PDPageContentStream(pdf, page, PDPageContentStream.AppendMode.APPEND, true, true);
                 contentStream.beginText();
                 contentStream.newLineAtOffset(margin, yPosition);
-            } 
-            else if (element instanceof XWPFPictureData) {
-                contentStream.endText();
-                contentStream.close();
-
-                XWPFPictureData pictureData = (XWPFPictureData) element;
-                byte[] imageBytes = pictureData.getData();
-                BufferedImage bufferedImage = ImageIO.read(new ByteArrayInputStream(imageBytes));
-
-                if (bufferedImage != null) {
-                    PDImageXObject image = LosslessFactory.createFromImage(pdf, bufferedImage);
-                    PDPageContentStream imageStream = new PDPageContentStream(pdf, page, PDPageContentStream.AppendMode.APPEND, true, true);
-                    imageStream.drawImage(image, margin, yPosition - 150, 150, 100);
-                    imageStream.close();
-                    yPosition -= 150;
-                }
-
-                contentStream = new PDPageContentStream(pdf, page, PDPageContentStream.AppendMode.APPEND, true, true);
-                contentStream.beginText();
-                contentStream.newLineAtOffset(margin, yPosition);
             }
         }
 
-        contentStream.endText();
         contentStream.close();
-
         pdf.save("output.pdf");
         pdf.close();
         document.close();
         fis.close();
 
-        System.out.println("DOCX converted to PDF with exact order and no stream errors!");
+        System.out.println("DOCX converted to PDF with images in correct order!");
     }
 }
