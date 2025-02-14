@@ -1,0 +1,38 @@
+import org.apache.pdfbox.pdmodel.*;
+import org.apache.pdfbox.pdmodel.font.*;
+
+import java.io.*;
+
+public class TxtToPdfPreserveFormat {
+    public static void main(String[] args) {
+        String inputTxtFile = "example.txt";
+        String outputPdfFile = "output.pdf";
+
+        try (PDDocument document = new PDDocument()) {
+            PDPage page = new PDPage();
+            document.addPage(page);
+
+            PDPageContentStream contentStream = new PDPageContentStream(document, page);
+            contentStream.setFont(PDType1Font.COURIER, 12); // Use monospaced font
+            contentStream.beginText();
+            contentStream.setLeading(15); // Line spacing
+            contentStream.newLineAtOffset(50, 750);
+
+            try (BufferedReader br = new BufferedReader(new FileReader(inputTxtFile))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    contentStream.showText(line.replace("\t", "    ")); // Replace tabs with spaces
+                    contentStream.newLine();
+                }
+            }
+
+            contentStream.endText();
+            contentStream.close();
+
+            document.save(outputPdfFile);
+            System.out.println("PDF created successfully: " + outputPdfFile);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
