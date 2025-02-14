@@ -1,0 +1,47 @@
+import org.apache.poi.xslf.usermodel.XMLSlideShow;
+import org.apache.poi.xslf.usermodel.XSLFSlide;
+import org.apache.pdfbox.pdmodel.*;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+
+import javax.imageio.ImageIO;
+import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.*;
+
+public class PPTXToPDF {
+    public static void main(String[] args) throws Exception {
+        FileInputStream fis = new FileInputStream("input.pptx");
+        XMLSlideShow ppt = new XMLSlideShow(fis);
+        PDDocument pdf = new PDDocument();
+
+        for (XSLFSlide slide : ppt.getSlides()) {
+            int width = 800, height = 600;
+            BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+            Graphics2D graphics = img.createGraphics();
+            graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            graphics.setColor(Color.WHITE);
+            graphics.fillRect(0, 0, width, height);
+            slide.draw(graphics);
+            graphics.dispose();
+
+            // Save slide as image
+            File tempImage = File.createTempFile("slide", ".png");
+            ImageIO.write(img, "png", tempImage);
+
+            // Add image to PDF
+            PDPage page = new PDPage(PDRectangle.A4);
+            pdf.addPage(page);
+            PDPageContentStream contentStream = new PDPageContentStream(pdf, page);
+            PDImageXObject pdImage = PDImageXObject.createFromFile(tempImage.getAbsolutePath(), pdf);
+            contentStream.drawImage(pdImage, 50, 100, 500, 400);
+            contentStream.close();
+        }
+
+        pdf.save("output.pdf");
+        pdf.close();
+        ppt.close();
+        fis.close();
+
+        System.out.println("PPTX to PDF conversion completed!");
+    }
+}
