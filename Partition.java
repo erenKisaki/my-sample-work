@@ -31,18 +31,8 @@ public class DocxToPdfExactOrder {
             if (element instanceof XWPFParagraph) {
                 XWPFParagraph paragraph = (XWPFParagraph) element;
 
-                contentStream.beginText();
-                contentStream.newLineAtOffset(margin, yPosition);
-
                 for (XWPFRun run : paragraph.getRuns()) {
-                    PDFont font = fontRegular;
-                    if (run.isBold()) font = fontBold;
-                    if (run.isItalic()) font = fontItalic;
-
-                    contentStream.setFont(font, run.getFontSize() > 0 ? run.getFontSize() : 12);
-                    contentStream.showText(run.text());
-
-                    // ✅ Handle images inside the paragraph
+                    // **🔹 CHECK IF RUN CONTAINS AN IMAGE**
                     for (XWPFPicture picture : run.getEmbeddedPictures()) {
                         contentStream.endText();
                         contentStream.close();
@@ -54,21 +44,53 @@ public class DocxToPdfExactOrder {
                         if (bufferedImage != null) {
                             PDImageXObject image = LosslessFactory.createFromImage(pdf, bufferedImage);
                             PDPageContentStream imageStream = new PDPageContentStream(pdf, page, PDPageContentStream.AppendMode.APPEND, true, true);
-                            imageStream.drawImage(image, margin, yPosition - 150, 150, 100);
+                            float imageHeight = 100, imageWidth = 150;
+                            
+                            // **Check if image fits on the page; if not, add a new page**
+                            if (yPosition - imageHeight < margin) {
+                                page = new PDPage();
+                                pdf.addPage(page);
+                                imageStream.close();
+                                imageStream = new PDPageContentStream(pdf, page);
+                                yPosition = page.getMediaBox().getHeight() - margin;
+                            }
+                            
+                            imageStream.drawImage(image, margin, yPosition - imageHeight, imageWidth, imageHeight);
                             imageStream.close();
-                            yPosition -= 150;
+                            yPosition -= (imageHeight + 10);
                         }
 
                         contentStream = new PDPageContentStream(pdf, page, PDPageContentStream.AppendMode.APPEND, true, true);
                         contentStream.beginText();
                         contentStream.newLineAtOffset(margin, yPosition);
                     }
+
+                    // **🔹 PROCESS TEXT AFTER IMAGES**
+                    PDFont font = fontRegular;
+                    if (run.isBold()) font = fontBold;
+                    if (run.isItalic()) font = fontItalic;
+
+                    contentStream.setFont(font, run.getFontSize() > 0 ? run.getFontSize() : 12);
+                    contentStream.showText(run.text());
                 }
 
-                contentStream.endText();
+                contentStream.newLine();
                 yPosition -= 20;
+
+                // **Check for new page if text exceeds page height**
+                if (yPosition < 50) {
+                    contentStream.endText();
+                    contentStream.close();
+                    page = new PDPage();
+                    pdf.addPage(page);
+                    contentStream = new PDPageContentStream(pdf, page);
+                    contentStream.beginText();
+                    contentStream.newLineAtOffset(margin, page.getMediaBox().getHeight() - margin);
+                    yPosition = page.getMediaBox().getHeight() - margin;
+                }
             } 
             else if (element instanceof XWPFTable) {
+                contentStream.endText();
                 contentStream.close();
 
                 PDPageContentStream tableStream = new PDPageContentStream(pdf, page, PDPageContentStream.AppendMode.APPEND, true, true);
@@ -104,12 +126,14 @@ public class DocxToPdfExactOrder {
             }
         }
 
+        contentStream.endText();
         contentStream.close();
+
         pdf.save("output.pdf");
         pdf.close();
         document.close();
         fis.close();
 
-        System.out.println("DOCX converted to PDF with images in correct order!");
+        System.out.println("✅ DOCX converted to PDF with exact order, including images!");
     }
 }
