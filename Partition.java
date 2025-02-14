@@ -14,22 +14,22 @@ public class DocxToPdfExactOrder {
         PDPage page = new PDPage();
         pdf.addPage(page);
 
-        PDPageContentStream contentStream = new PDPageContentStream(pdf, page);
-        contentStream.setLeading(14.5f);
+        float margin = 50;
+        float yPosition = page.getMediaBox().getHeight() - margin;
+        float pageWidth = page.getMediaBox().getWidth() - 2 * margin;
 
         PDFont fontRegular = PDType1Font.HELVETICA;
         PDFont fontBold = PDType1Font.HELVETICA_BOLD;
         PDFont fontItalic = PDType1Font.HELVETICA_OBLIQUE;
 
-        float margin = 50;
-        float yPosition = page.getMediaBox().getHeight() - margin;
+        PDPageContentStream contentStream = new PDPageContentStream(pdf, page);
+        contentStream.setLeading(14.5f);
+        contentStream.beginText();
+        contentStream.newLineAtOffset(margin, yPosition);
 
         for (IBodyElement element : document.getBodyElements()) {
             if (element instanceof XWPFParagraph) {
                 XWPFParagraph paragraph = (XWPFParagraph) element;
-
-                contentStream.beginText();
-                contentStream.newLineAtOffset(margin, yPosition);
 
                 for (XWPFRun run : paragraph.getRuns()) {
                     PDFont font = fontRegular;
@@ -40,20 +40,34 @@ public class DocxToPdfExactOrder {
                     contentStream.showText(run.text());
                 }
 
-                contentStream.endText();
+                contentStream.newLine();
                 yPosition -= 20;
+
+                if (yPosition < 50) {
+                    contentStream.endText();
+                    contentStream.close();
+                    page = new PDPage();
+                    pdf.addPage(page);
+                    contentStream = new PDPageContentStream(pdf, page);
+                    contentStream.beginText();
+                    contentStream.newLineAtOffset(margin, page.getMediaBox().getHeight() - margin);
+                    yPosition = page.getMediaBox().getHeight() - margin;
+                }
             } 
             else if (element instanceof XWPFTable) {
+                contentStream.endText();
+                contentStream.close();
+
+                PDPageContentStream tableStream = new PDPageContentStream(pdf, page, PDPageContentStream.AppendMode.APPEND, true, true);
                 XWPFTable table = (XWPFTable) element;
-                float tableX = margin;
                 float tableY = yPosition;
-                float cellWidth = 100;
+                float cellWidth = pageWidth / table.getRows().get(0).getTableCells().size();
                 float cellHeight = 20;
 
                 for (XWPFTableRow row : table.getRows()) {
+                    float tableX = margin;
+
                     for (XWPFTableCell cell : row.getTableCells()) {
-                        PDPageContentStream tableStream = new PDPageContentStream(pdf, page, PDPageContentStream.AppendMode.APPEND, true, true);
-                        
                         tableStream.addRect(tableX, tableY, cellWidth, -cellHeight);
                         tableStream.stroke();
 
@@ -62,16 +76,23 @@ public class DocxToPdfExactOrder {
                         tableStream.setFont(fontRegular, 10);
                         tableStream.showText(cell.getText());
                         tableStream.endText();
-                        tableStream.close();
 
                         tableX += cellWidth;
                     }
-                    tableX = margin;
                     tableY -= cellHeight;
                 }
+
+                tableStream.close();
                 yPosition = tableY - 20;
+
+                contentStream = new PDPageContentStream(pdf, page, PDPageContentStream.AppendMode.APPEND, true, true);
+                contentStream.beginText();
+                contentStream.newLineAtOffset(margin, yPosition);
             } 
             else if (element instanceof XWPFPictureData) {
+                contentStream.endText();
+                contentStream.close();
+
                 XWPFPictureData pictureData = (XWPFPictureData) element;
                 byte[] imageBytes = pictureData.getData();
                 BufferedImage bufferedImage = ImageIO.read(new ByteArrayInputStream(imageBytes));
@@ -83,15 +104,21 @@ public class DocxToPdfExactOrder {
                     imageStream.close();
                     yPosition -= 150;
                 }
+
+                contentStream = new PDPageContentStream(pdf, page, PDPageContentStream.AppendMode.APPEND, true, true);
+                contentStream.beginText();
+                contentStream.newLineAtOffset(margin, yPosition);
             }
         }
 
+        contentStream.endText();
         contentStream.close();
+
         pdf.save("output.pdf");
         pdf.close();
         document.close();
         fis.close();
 
-        System.out.println("DOCX converted to PDF with exact order and formatting!");
+        System.out.println("DOCX converted to PDF with exact order and no stream errors!");
     }
 }
