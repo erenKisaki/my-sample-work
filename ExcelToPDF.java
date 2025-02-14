@@ -38,4 +38,27 @@ public class ExcelToPDF {
 
         // Extract and insert images
         if (workbook instanceof org.apache.poi.xssf.usermodel.XSSFWorkbook) {
-            List<XSSFPictureData> pictures = ((org.apache.poi.x
+            List<XSSFPictureData> pictures = ((org.apache.poi.xssf.usermodel.XSSFWorkbook) workbook).getAllPictures();
+            for (XSSFPictureData picture : pictures) {
+                byte[] imageBytes = picture.getData();
+                BufferedImage bImage = ImageIO.read(new ByteArrayInputStream(imageBytes));
+                File imageFile = File.createTempFile("excel_image", ".png");
+                ImageIO.write(bImage, "png", imageFile);
+                PDImageXObject pdImage = PDImageXObject.createFromFile(imageFile.getAbsolutePath(), pdf);
+
+                PDPage imgPage = new PDPage();
+                pdf.addPage(imgPage);
+                PDPageContentStream imgStream = new PDPageContentStream(pdf, imgPage);
+                imgStream.drawImage(pdImage, 50, 200, 400, 300);
+                imgStream.close();
+            }
+        }
+
+        pdf.save("output.pdf");
+        pdf.close();
+        workbook.close();
+        fis.close();
+
+        System.out.println("XLSX to PDF conversion completed!");
+    }
+}
