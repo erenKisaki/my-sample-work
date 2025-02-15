@@ -19,27 +19,31 @@
         for (int i = 0; i < range.numParagraphs(); i++) {
             Paragraph paragraph = range.getParagraph(i);
 
-            if (picturesTable.hasPicture(paragraph)) {
+            // **🔹 Check if paragraph contains an image**
+            Picture pic = picturesTable.getPicture(paragraph);
+            if (pic != null) {
                 contentStream.endText();
                 contentStream.close();
 
-                Picture picture = picturesTable.extractPicture(paragraph, false);
-                byte[] imageBytes = picture.getContent();
+                byte[] imageBytes = pic.getContent();
                 BufferedImage bufferedImage = ImageIO.read(new ByteArrayInputStream(imageBytes));
 
                 if (bufferedImage != null) {
                     PDImageXObject image = LosslessFactory.createFromImage(pdf, bufferedImage);
                     PDPageContentStream imageStream = new PDPageContentStream(pdf, page, PDPageContentStream.AppendMode.APPEND, true, true);
 
-                    float imgWidth = picture.getWidth();
-                    float imgHeight = picture.getHeight();
+                    // **🔹 Maintain original image dimensions**
+                    float imgWidth = pic.getWidth();
+                    float imgHeight = pic.getHeight();
 
+                    // Ensure image fits within page width
                     if (imgWidth > pageWidth) {
                         float scale = pageWidth / imgWidth;
                         imgWidth *= scale;
                         imgHeight *= scale;
                     }
 
+                    // Add new page if needed
                     if (yPosition - imgHeight < margin) {
                         page = new PDPage();
                         pdf.addPage(page);
@@ -48,21 +52,25 @@
                         yPosition = page.getMediaBox().getHeight() - margin;
                     }
 
+                    // **🔹 Draw Image on PDF**
                     imageStream.drawImage(image, margin, yPosition - imgHeight, imgWidth, imgHeight);
                     imageStream.close();
                     yPosition -= (imgHeight + 10);
                 }
 
+                // Restart text stream after image
                 contentStream = new PDPageContentStream(pdf, page, PDPageContentStream.AppendMode.APPEND, true, true);
                 contentStream.beginText();
                 contentStream.newLineAtOffset(margin, yPosition);
             } else {
+                // **🔹 Process text**
                 contentStream.setFont(fontRegular, 12);
                 contentStream.showText(paragraph.text().trim());
                 contentStream.newLine();
                 yPosition -= 20;
             }
 
+            // **🔹 Check for new page if needed**
             if (yPosition < 50) {
                 contentStream.endText();
                 contentStream.close();
