@@ -15,17 +15,20 @@
 
         Range range = document.getRange();
         PicturesTable picturesTable = document.getPicturesTable();
+        List<Picture> pictures = picturesTable.getAllPictures();
+        int pictureIndex = 0;
 
         for (int i = 0; i < range.numParagraphs(); i++) {
             Paragraph paragraph = range.getParagraph(i);
+            String text = paragraph.text().trim();
 
-            // **🔹 Check if paragraph contains an image**
-            Picture pic = picturesTable.getPicture(paragraph);
-            if (pic != null) {
+            // **🔹 Check if paragraph contains an image placeholder**
+            if (text.contains("\u0008") && pictureIndex < pictures.size()) {  // `\u0008` represents an image placeholder
                 contentStream.endText();
                 contentStream.close();
 
-                byte[] imageBytes = pic.getContent();
+                Picture picture = pictures.get(pictureIndex++);
+                byte[] imageBytes = picture.getContent();
                 BufferedImage bufferedImage = ImageIO.read(new ByteArrayInputStream(imageBytes));
 
                 if (bufferedImage != null) {
@@ -33,10 +36,10 @@
                     PDPageContentStream imageStream = new PDPageContentStream(pdf, page, PDPageContentStream.AppendMode.APPEND, true, true);
 
                     // **🔹 Maintain original image dimensions**
-                    float imgWidth = pic.getWidth();
-                    float imgHeight = pic.getHeight();
+                    float imgWidth = picture.getWidth();
+                    float imgHeight = picture.getHeight();
 
-                    // Ensure image fits within page width
+                    // Scale down if image is wider than page
                     if (imgWidth > pageWidth) {
                         float scale = pageWidth / imgWidth;
                         imgWidth *= scale;
@@ -65,7 +68,7 @@
             } else {
                 // **🔹 Process text**
                 contentStream.setFont(fontRegular, 12);
-                contentStream.showText(paragraph.text().trim());
+                contentStream.showText(text);
                 contentStream.newLine();
                 yPosition -= 20;
             }
