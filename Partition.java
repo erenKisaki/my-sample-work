@@ -1,46 +1,53 @@
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.pdfbox.pdmodel.*;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import java.io.*;
 
-        Workbook workbook = WorkbookFactory.create(fis);
+public class ExcelToPDFFormatted {
+    public static void main(String[] args) throws Exception {
+        FileInputStream fis = new FileInputStream("input.xlsx");
+        Workbook workbook = new XSSFWorkbook(fis);
         PDDocument pdf = new PDDocument();
-        PDPage page = new PDPage(PDRectangle.A4);
-        pdf.addPage(page);
-        
-        PDPageContentStream contentStream = new PDPageContentStream(pdf, page);
-        contentStream.setFont(PDType1Font.HELVETICA_BOLD, 12);
-        contentStream.setLeading(15);
-        contentStream.beginText();  // 🔹 FIX: Start text stream
-        contentStream.newLineAtOffset(50, 750);
 
-        // Read sheets and write to PDF in a structured format
         for (Sheet sheet : workbook) {
-            contentStream.showText("Sheet: " + sheet.getSheetName());
-            contentStream.newLine();
+            PDPage page = new PDPage(PDRectangle.A4);
+            pdf.addPage(page);
+            PDPageContentStream contentStream = new PDPageContentStream(pdf, page);
+            contentStream.setFont(PDType1Font.HELVETICA, 10);
+            
+            int startX = 50, startY = 750, rowHeight = 20, colWidth = 100;
             
             for (Row row : sheet) {
+                int cellX = startX;
                 for (Cell cell : row) {
-                    contentStream.showText(cell.toString() + " | ");  // 🔹 FIX: Table-like format
+                    String cellValue = getCellValue(cell);
+                    contentStream.beginText();
+                    contentStream.newLineAtOffset(cellX, startY);
+                    contentStream.showText(cellValue);
+                    contentStream.endText();
+                    cellX += colWidth;
                 }
-                contentStream.newLine();
+                startY -= rowHeight;
             }
+            
+            contentStream.close();
         }
-        
-        contentStream.endText();
-        contentStream.close();
 
-        // Extract images with proper positioning
-        if (workbook instanceof org.apache.poi.xssf.usermodel.XSSFWorkbook) {
-            List<XSSFPictureData> pictures = ((org.apache.poi.xssf.usermodel.XSSFWorkbook) workbook).getAllPictures();
-            for (XSSFPictureData picture : pictures) {
-                byte[] imageBytes = picture.getData();
-                BufferedImage bImage = ImageIO.read(new ByteArrayInputStream(imageBytes));
-                
-                if (bImage != null) {
-                    PDImageXObject pdImage = PDImageXObject.createFromByteArray(pdf, imageBytes, "excel_image");
-                    PDPage imgPage = new PDPage(PDRectangle.A4);
-                    pdf.addPage(imgPage);
-                    
-                    PDPageContentStream imgStream = new PDPageContentStream(pdf, imgPage);
-                    imgStream.drawImage(pdImage, 50, 300, 400, 300);  // 🔹 FIX: Proper image size
-                    imgStream.close();
-                }
-            }
+        pdf.save("output.pdf");
+        pdf.close();
+        workbook.close();
+        fis.close();
+        System.out.println("✅ Excel converted to PDF with proper formatting!");
+    }
+
+    private static String getCellValue(Cell cell) {
+        switch (cell.getCellType()) {
+            case STRING: return cell.getStringCellValue();
+            case NUMERIC: return String.valueOf(cell.getNumericCellValue());
+            case BOOLEAN: return String.valueOf(cell.getBooleanCellValue());
+            case FORMULA: return cell.getSheet().getWorkbook().getCreationHelper().createFormulaEvaluator().evaluate(cell).formatAsString();
+            default: return "";
         }
+    }
+}
