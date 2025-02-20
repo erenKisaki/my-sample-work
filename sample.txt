@@ -1,1 +1,66 @@
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicSessionCredentials;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
+import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
+import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
+import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.s3.model.ListObjectsRequest;
+import com.amazonaws.services.s3.model.ObjectListing;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class S3Helper {
+    private static final String ROLE_ARN = System.getenv("assumeRoleArn"); // Get Role ARN from Lambda Env Variable
+    private static final String SESSION_NAME = "S3AccessSession";
+    private static final String REGION = "us-east-1"; // Change to your AWS Region
+
+    public List<String> retrieveAllObjectsFromS3Bucket() {
+        List<String> keys = new ArrayList<>();
+        long start = System.currentTimeMillis();
+
+        // Assume Role using STS
+        AWSSecurityTokenService stsClient = AWSSecurityTokenServiceClientBuilder.standard()
+                .withRegion(REGION)
+                .build();
+
+        AssumeRoleRequest roleRequest = new AssumeRoleRequest()
+                .withRoleArn(ROLE_ARN)
+                .withRoleSessionName(SESSION_NAME);
+
+        AssumeRoleResult roleResponse = stsClient.assumeRole(roleRequest);
+        AWSCredentials sessionCredentials = new BasicSessionCredentials(
+                roleResponse.getCredentials().getAccessKeyId(),
+                roleResponse.getCredentials().getSecretAccessKey(),
+                roleResponse.getCredentials().getSessionToken()
+        );
+
+        // Create S3 Client with assumed role credentials
+        AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
+                .withRegion(REGION)
+                .withCredentials(new AWSStaticCredentialsProvider(sessionCredentials))
+                .build();
+
+        ListObjectsRequest listObjectsRequest = new ListObjectsRequest()
+                .withBucketName("your-bucket-name"); // Replace with your bucket name
+
+        try {
+            ObjectListing objectListing = s3Client.listObjects(listObjectsRequest);
+            List<S3ObjectSummary> s3ObjectSummaries = objectListing.getObjectSummaries();
+
+            for (S3ObjectSummary s3ObjectSummary : s3ObjectSummaries) {
+                keys.add(s3ObjectSummary.getKey());
+            }
+        } catch (Exception e) {
+            System.err.println("S3Helper Method caught exception while getting objects: " + e.getMessage());
+        }
+
+        long end = System.currentTimeMillis();
+        return keys;
+    }
+}
 
