@@ -1,66 +1,66 @@
-import com.amazonaws.auth.AWSCredentials;
-import com.amazonaws.auth.AWSStaticCredentialsProvider;
-import com.amazonaws.auth.BasicSessionCredentials;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenService;
-import com.amazonaws.services.securitytoken.AWSSecurityTokenServiceClientBuilder;
-import com.amazonaws.services.securitytoken.model.AssumeRoleRequest;
-import com.amazonaws.services.securitytoken.model.AssumeRoleResult;
-import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.AmazonS3ClientBuilder;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFPictureData;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.pdfbox.pdmodel.*;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 
-import java.util.ArrayList;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.*;
 import java.util.List;
 
-public class S3Helper {
-    private static final String ROLE_ARN = System.getenv("assumeRoleArn"); // Get Role ARN from Lambda Env Variable
-    private static final String SESSION_NAME = "S3AccessSession";
-    private static final String REGION = "us-east-1"; // Change to your AWS Region
+public class ExcelToPDF {
+    public static void main(String[] args) throws Exception {
+        FileInputStream fis = new FileInputStream("input.xls"); // Change to "input.xlsx" for XLSX
+        Workbook workbook = WorkbookFactory.create(fis);
+        PDDocument pdf = new PDDocument();
 
-    public List<String> retrieveAllObjectsFromS3Bucket() {
-        List<String> keys = new ArrayList<>();
-        long start = System.currentTimeMillis();
+        for (Sheet sheet : workbook) {
+            PDPage page = new PDPage(PDRectangle.A4);
+            pdf.addPage(page);
+            PDPageContentStream contentStream = new PDPageContentStream(pdf, page);
+            
+            contentStream.setFont(PDType1Font.HELVETICA, 10);
+            contentStream.setLeading(14);
+            contentStream.beginText();
+            contentStream.newLineAtOffset(50, 750);
 
-        // Assume Role using STS
-        AWSSecurityTokenService stsClient = AWSSecurityTokenServiceClientBuilder.standard()
-                .withRegion(REGION)
-                .build();
-
-        AssumeRoleRequest roleRequest = new AssumeRoleRequest()
-                .withRoleArn(ROLE_ARN)
-                .withRoleSessionName(SESSION_NAME);
-
-        AssumeRoleResult roleResponse = stsClient.assumeRole(roleRequest);
-        AWSCredentials sessionCredentials = new BasicSessionCredentials(
-                roleResponse.getCredentials().getAccessKeyId(),
-                roleResponse.getCredentials().getSecretAccessKey(),
-                roleResponse.getCredentials().getSessionToken()
-        );
-
-        // Create S3 Client with assumed role credentials
-        AmazonS3 s3Client = AmazonS3ClientBuilder.standard()
-                .withRegion(REGION)
-                .withCredentials(new AWSStaticCredentialsProvider(sessionCredentials))
-                .build();
-
-        ListObjectsRequest listObjectsRequest = new ListObjectsRequest()
-                .withBucketName("your-bucket-name"); // Replace with your bucket name
-
-        try {
-            ObjectListing objectListing = s3Client.listObjects(listObjectsRequest);
-            List<S3ObjectSummary> s3ObjectSummaries = objectListing.getObjectSummaries();
-
-            for (S3ObjectSummary s3ObjectSummary : s3ObjectSummaries) {
-                keys.add(s3ObjectSummary.getKey());
+            for (Row row : sheet) {
+                for (Cell cell : row) {
+                    String value = cell.toString();  // Extract only displayed values
+                    contentStream.showText(value + " | "); // Simulating columns
+                }
+                contentStream.newLine();
             }
-        } catch (Exception e) {
-            System.err.println("S3Helper Method caught exception while getting objects: " + e.getMessage());
+
+            contentStream.endText();
+            contentStream.close();
         }
 
-        long end = System.currentTimeMillis();
-        return keys;
+        // Extract images (ONLY FOR XLSX)
+        if (workbook instanceof XSSFWorkbook) {
+            List<XSSFPictureData> pictures = ((XSSFWorkbook) workbook).getAllPictures();
+            for (XSSFPictureData picture : pictures) {
+                byte[] imageBytes = picture.getData();
+                PDImageXObject pdImage = PDImageXObject.createFromByteArray(pdf, imageBytes, "image");
+
+                PDPage imgPage = new PDPage(PDRectangle.A4);
+                pdf.addPage(imgPage);
+                PDPageContentStream imgStream = new PDPageContentStream(pdf, imgPage);
+                imgStream.drawImage(pdImage, 50, 500, 400, 300);
+                imgStream.close();
+            }
+        } else {
+            System.out.println("⚠️ Image extraction is not supported for XLS files.");
+        }
+
+        pdf.save("output.pdf");
+        pdf.close();
+        workbook.close();
+        fis.close();
+
+        System.out.println("✅ Excel (XLS/XLSX) to PDF conversion completed!");
     }
 }
-
