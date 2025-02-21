@@ -9,27 +9,54 @@ public class TxtToPdfPreserveFormat {
         String outputPdfFile = "output.pdf";
 
         try (PDDocument document = new PDDocument()) {
-            PDPage page = new PDPage();
-            document.addPage(page);
+            PDFont font = PDType1Font.COURIER;
+            float fontSize = 12;
+            float leading = fontSize + 3; // Line height
+            float margin = 50;
+            float pageWidth = PDRectangle.A4.getWidth();
+            float pageHeight = PDRectangle.A4.getHeight();
+            float yStart = pageHeight - margin;
+            float yPosition = yStart;
 
+            PDPage page = new PDPage(PDRectangle.A4);
+            document.addPage(page);
             PDPageContentStream contentStream = new PDPageContentStream(document, page);
-            contentStream.setFont(PDType1Font.COURIER, 12); // Use monospaced font
+            contentStream.setFont(font, fontSize);
+            contentStream.setLeading(leading);
             contentStream.beginText();
-            contentStream.setLeading(15); // Line spacing
-            contentStream.newLineAtOffset(50, 750);
+            contentStream.newLineAtOffset(margin, yStart);
 
             try (BufferedReader br = new BufferedReader(new FileReader(inputTxtFile))) {
                 String line;
                 while ((line = br.readLine()) != null) {
+                    if (yPosition - leading < margin) {
+                        // Close current page's content stream
+                        contentStream.endText();
+                        contentStream.close();
+
+                        // Create new page
+                        page = new PDPage(PDRectangle.A4);
+                        document.addPage(page);
+                        contentStream = new PDPageContentStream(document, page);
+                        contentStream.setFont(font, fontSize);
+                        contentStream.setLeading(leading);
+                        contentStream.beginText();
+                        contentStream.newLineAtOffset(margin, yStart);
+                        yPosition = yStart; // Reset position for new page
+                    }
+
                     contentStream.showText(line.replace("\t", "    ")); // Replace tabs with spaces
-                    contentStream.newLine();
+                    contentStream.newLineAtOffset(0, -leading); // Move to the next line
+                    yPosition -= leading;
                 }
             }
 
+            // Close last content stream
             contentStream.endText();
             contentStream.close();
 
             document.save(outputPdfFile);
+            document.close();
             System.out.println("PDF created successfully: " + outputPdfFile);
         } catch (IOException e) {
             e.printStackTrace();
