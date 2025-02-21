@@ -1,1 +1,72 @@
-<jsp:include page="<%= request.getScheme() + \"://\" + request.getServerName() + \":\" + request.getServerPort() + \"/path/to/idvstart.html\" %>" />
+<%@ page import="java.net.*, java.io.*, org.json.simple.*, org.json.simple.parser.*" %>
+<%@ page contentType="text/html; charset=UTF-8" language="java" %>
+
+<%
+    // Generate Nonce Value for Security Headers
+    byte[] nonceArray = new byte[32];
+    new java.security.SecureRandom().nextBytes(nonceArray);
+    String nonceVal = java.util.Base64.getEncoder().encodeToString(nonceArray);
+    response.addHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'nonce-" + nonceVal + "'; style-src 'self' 'nonce-" + nonceVal + "'; img-src 'self';");
+
+    // Fetch and process custom login session data
+    String formActionUrl = null;
+    boolean haveSetupError = false;
+    String userConsent = null;
+    int consentVersion = 1;
+
+    SessionStateSupport sessionStateSupport = new SessionStateSupport();
+    ResourceBundle resourceBundle = ResourceBundle.getBundle("messages");
+
+    String customLogin = (String) sessionStateSupport.getAttribute(LoginConstants.SESSION_ATTR_LOGIN, request, response);
+    if (customLogin != null && !customLogin.isEmpty()) {
+        JSONParser parser = new JSONParser();
+        try {
+            Object obj = parser.parse(customLogin);
+            JSONObject jsonObject = (JSONObject) obj;
+
+            // Masking sensitive data before logging
+            String jsonstr = jsonObject.toString().replaceAll("riskAuthToken\":\\\"[^\"]+\\\"", "riskAuthToken\":\"***\"");
+            log.info("idvStart - JsonObj received: {}", jsonstr);
+
+            // Extract necessary session attributes
+            formActionUrl = (String) jsonObject.get(LoginConstants.SESSION_FORMACTION_URL);
+            userConsent = (String) jsonObject.get(BofAIDConstants.IDV_SESSION_USERCONSENT);
+            consentVersion = ((Long) jsonObject.get(BofAIDConstants.IDV_SESSION_VERSION)).intValue();
+
+            if (formActionUrl == null || userConsent == null || userConsent.isEmpty()) {
+                log.error("Either userConsent or formActionUrl is defined as null");
+                haveSetupError = true;
+            } else {
+                log.info("UI LOGS from idvstart: userConsent={}, consentVersion={}", userConsent, consentVersion);
+            }
+        } catch (Exception e) {
+            haveSetupError = true;
+            log.error("idvStart - Error with JSON Data, haveSetupError={}", haveSetupError, e);
+        }
+    } else {
+        haveSetupError = true;
+    }
+%>
+
+<%
+    // Dynamically fetch and include the HTML file from the server
+    String htmlUrl = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + "/idv.start.template.html";
+    StringBuilder htmlContent = new StringBuilder();
+
+    try {
+        URL url = new URL(htmlUrl);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        conn.setRequestMethod("GET");
+
+        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+        String inputLine;
+        while ((inputLine = in.readLine()) != null) {
+            htmlContent.append(inputLine).append("\n");
+        }
+        in.close();
+    } catch (Exception e) {
+        htmlContent.append("<p style='color:red;'>Error loading template: ").append(e.getMessage()).append("</p>");
+    }
+%>
+
+<%= htmlContent.toString() %>
