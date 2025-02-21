@@ -1,15 +1,6 @@
-import org.apache.pdfbox.pdmodel.*;
-import org.apache.pdfbox.pdmodel.font.*;
-
-import java.io.*;
-
-public class TxtToPdfPreserveFormat {
-    public static void main(String[] args) {
-        String inputTxtFile = "example.txt";
-        String outputPdfFile = "output.pdf";
 
         try (PDDocument document = new PDDocument()) {
-            PDFont font = PDType1Font.COURIER;
+            PDFont font = PDType1Font.COURIER; // Use monospaced font to preserve formatting
             float fontSize = 12;
             float leading = fontSize + 3; // Line height
             float margin = 50;
@@ -26,40 +17,32 @@ public class TxtToPdfPreserveFormat {
             contentStream.beginText();
             contentStream.newLineAtOffset(margin, yStart);
 
-            try (BufferedReader br = new BufferedReader(new FileReader(inputTxtFile))) {
-                String line;
-                while ((line = br.readLine()) != null) {
-                    if (yPosition - leading < margin) {
-                        // Close current page's content stream
-                        contentStream.endText();
-                        contentStream.close();
+            // Convert byte array to String
+            String text = new String(inputBytes);
+            String[] lines = text.split("\n"); // Split by new lines
 
-                        // Create new page
-                        page = new PDPage(PDRectangle.A4);
-                        document.addPage(page);
-                        contentStream = new PDPageContentStream(document, page);
-                        contentStream.setFont(font, fontSize);
-                        contentStream.setLeading(leading);
-                        contentStream.beginText();
-                        contentStream.newLineAtOffset(margin, yStart);
-                        yPosition = yStart; // Reset position for new page
-                    }
+            for (String line : lines) {
+                if (yPosition - leading < margin) {
+                    // Close current page's content stream
+                    contentStream.endText();
+                    contentStream.close();
 
-                    contentStream.showText(line.replace("\t", "    ")); // Replace tabs with spaces
-                    contentStream.newLineAtOffset(0, -leading); // Move to the next line
-                    yPosition -= leading;
+                    // Create new page
+                    page = new PDPage(PDRectangle.A4);
+                    document.addPage(page);
+                    contentStream = new PDPageContentStream(document, page);
+                    contentStream.setFont(font, fontSize);
+                    contentStream.setLeading(leading);
+                    contentStream.beginText();
+                    contentStream.newLineAtOffset(margin, yStart);
+                    yPosition = yStart; // Reset position for new page
                 }
+
+                contentStream.showText(line.replace("\t", "    ")); // Replace tabs with spaces
+                contentStream.newLineAtOffset(0, -leading); // Move to the next line
+                yPosition -= leading;
             }
 
             // Close last content stream
             contentStream.endText();
             contentStream.close();
-
-            document.save(outputPdfFile);
-            document.close();
-            System.out.println("PDF created successfully: " + outputPdfFile);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-}
