@@ -4,7 +4,6 @@
             float fontSize = 12;
             float leading = fontSize + 3; // Line height
             float margin = 50;
-            float pageWidth = PDRectangle.A4.getWidth();
             float pageHeight = PDRectangle.A4.getHeight();
             float yStart = pageHeight - margin;
             float yPosition = yStart;
@@ -17,30 +16,30 @@
             contentStream.beginText();
             contentStream.newLineAtOffset(margin, yStart);
 
-            // Convert byte array to String
-            String text = new String(inputBytes);
-            String[] lines = text.split("\n"); // Split by new lines
+            // Read text from ByteArrayInputStream using BufferedReader
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(byteArrayInputStream))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    if (yPosition - leading < margin) {
+                        // Close current page's content stream
+                        contentStream.endText();
+                        contentStream.close();
 
-            for (String line : lines) {
-                if (yPosition - leading < margin) {
-                    // Close current page's content stream
-                    contentStream.endText();
-                    contentStream.close();
+                        // Create new page
+                        page = new PDPage(PDRectangle.A4);
+                        document.addPage(page);
+                        contentStream = new PDPageContentStream(document, page);
+                        contentStream.setFont(font, fontSize);
+                        contentStream.setLeading(leading);
+                        contentStream.beginText();
+                        contentStream.newLineAtOffset(margin, yStart);
+                        yPosition = yStart; // Reset position for new page
+                    }
 
-                    // Create new page
-                    page = new PDPage(PDRectangle.A4);
-                    document.addPage(page);
-                    contentStream = new PDPageContentStream(document, page);
-                    contentStream.setFont(font, fontSize);
-                    contentStream.setLeading(leading);
-                    contentStream.beginText();
-                    contentStream.newLineAtOffset(margin, yStart);
-                    yPosition = yStart; // Reset position for new page
+                    contentStream.showText(line.replace("\t", "    ")); // Replace tabs with spaces
+                    contentStream.newLineAtOffset(0, -leading); // Move to the next line
+                    yPosition -= leading;
                 }
-
-                contentStream.showText(line.replace("\t", "    ")); // Replace tabs with spaces
-                contentStream.newLineAtOffset(0, -leading); // Move to the next line
-                yPosition -= leading;
             }
 
             // Close last content stream
