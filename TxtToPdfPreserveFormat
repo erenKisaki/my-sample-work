@@ -1,47 +1,83 @@
+import org.apache.pdfbox.pdmodel.*;
+import org.apache.pdfbox.pdmodel.font.*;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import java.io.*;
 
-        try (PDDocument document = new PDDocument()) {
-            PDFont font = PDType1Font.COURIER; // Use monospaced font to preserve formatting
-            float fontSize = 12;
-            float leading = fontSize + 3; // Line height
-            float margin = 50;
-            float pageHeight = PDRectangle.A4.getHeight();
-            float yStart = pageHeight - margin;
-            float yPosition = yStart;
+public class TxtToPdfConverter {
+    private static final float MARGIN = 50;
+    private static final float FONT_SIZE = 10;
+    private static final float LINE_SPACING = FONT_SIZE * 1.2f;
+    private static final int TAB_WIDTH_SPACES = 4; // Adjust tab width
 
-            PDPage page = new PDPage(PDRectangle.A4);
-            document.addPage(page);
-            PDPageContentStream contentStream = new PDPageContentStream(document, page);
-            contentStream.setFont(font, fontSize);
-            contentStream.setLeading(leading);
-            contentStream.beginText();
-            contentStream.newLineAtOffset(margin, yStart);
+    public static void main(String[] args) throws IOException {
+        InputStream is = new FileInputStream("input.txt"); // Replace with your actual input stream
+        PDDocument document = new PDDocument();
+        PDRectangle pageSize = PDRectangle.A4;
 
-            // Read text from ByteArrayInputStream using BufferedReader
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(byteArrayInputStream))) {
-                String line;
-                while ((line = br.readLine()) != null) {
-                    if (yPosition - leading < margin) {
-                        // Close current page's content stream
-                        contentStream.endText();
-                        contentStream.close();
+        PDType1Font font = PDType1Font.COURIER; // Monospaced font for alignment
+        float pageWidth = pageSize.getWidth() - 2 * MARGIN;
 
-                        // Create new page
-                        page = new PDPage(PDRectangle.A4);
-                        document.addPage(page);
-                        contentStream = new PDPageContentStream(document, page);
-                        contentStream.setFont(font, fontSize);
-                        contentStream.setLeading(leading);
-                        contentStream.beginText();
-                        contentStream.newLineAtOffset(margin, yStart);
-                        yPosition = yStart; // Reset position for new page
+        PDPage page = new PDPage(pageSize);
+        document.addPage(page);
+        PDPageContentStream contentStream = new PDPageContentStream(document, page);
+        contentStream.setFont(font, FONT_SIZE);
+        contentStream.setLeading(LINE_SPACING);
+        contentStream.beginText();
+        contentStream.newLineAtOffset(MARGIN, pageSize.getHeight() - MARGIN);
+
+        BufferedReader br = new BufferedReader(new InputStreamReader(is));
+        String line;
+        float yPosition = pageSize.getHeight() - MARGIN;
+
+        while ((line = br.readLine()) != null) {
+            line = line.replace("\t", " ".repeat(TAB_WIDTH_SPACES)); // Preserve indentation
+
+            float textWidth = font.getStringWidth(line) / 1000 * FONT_SIZE;
+
+            if (textWidth > pageWidth) {
+                // Manually wrap text
+                String[] words = line.split(" ");
+                StringBuilder wrappedLine = new StringBuilder();
+                float currentWidth = 0;
+
+                for (String word : words) {
+                    float wordWidth = font.getStringWidth(word + " ") / 1000 * FONT_SIZE;
+                    if (currentWidth + wordWidth > pageWidth) {
+                        contentStream.showText(wrappedLine.toString());
+                        contentStream.newLine();
+                        wrappedLine.setLength(0);
+                        currentWidth = 0;
                     }
-
-                    contentStream.showText(line.replace("\t", "    ")); // Replace tabs with spaces
-                    contentStream.newLineAtOffset(0, -leading); // Move to the next line
-                    yPosition -= leading;
+                    wrappedLine.append(word).append(" ");
+                    currentWidth += wordWidth;
                 }
+                contentStream.showText(wrappedLine.toString());
+            } else {
+                contentStream.showText(line);
             }
 
-            // Close last content stream
-            contentStream.endText();
-            contentStream.close();
+            contentStream.newLine();
+            yPosition -= LINE_SPACING;
+
+            if (yPosition < MARGIN) {
+                contentStream.endText();
+                contentStream.close();
+                page = new PDPage(pageSize);
+                document.addPage(page);
+                contentStream = new PDPageContentStream(document, page);
+                contentStream.setFont(font, FONT_SIZE);
+                contentStream.setLeading(LINE_SPACING);
+                contentStream.beginText();
+                contentStream.newLineAtOffset(MARGIN, pageSize.getHeight() - MARGIN);
+                yPosition = pageSize.getHeight() - MARGIN;
+            }
+        }
+
+        contentStream.endText();
+        contentStream.close();
+        br.close();
+
+        document.save("output.pdf");
+        document.close();
+    }
+}
