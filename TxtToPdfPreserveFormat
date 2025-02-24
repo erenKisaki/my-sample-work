@@ -1,43 +1,19 @@
-        PDRectangle pageSize = PDRectangle.A4;
+    private static int findLineBreakIndex(String line, PDType1Font font, float fontSize, float maxWidth) throws IOException {
+        int breakIndex = line.length();
+        float textWidth = font.getStringWidth(line) / 1000 * fontSize;
+        
+        if (textWidth <= maxWidth) {
+            return breakIndex;
+        }
 
-        PDType1Font font = PDType1Font.COURIER; // Monospaced font for proper spacing
-        float pageWidth = pageSize.getWidth() - 2 * MARGIN;
-
-        PDPage page = new PDPage(pageSize);
-        document.addPage(page);
-        PDPageContentStream contentStream = new PDPageContentStream(document, page);
-        contentStream.setFont(font, FONT_SIZE);
-        contentStream.setLeading(LINE_SPACING);
-        contentStream.beginText();
-        contentStream.newLineAtOffset(MARGIN, pageSize.getHeight() - MARGIN);
-
-        BufferedReader br = new BufferedReader(new InputStreamReader(is));
-        String line;
-        float yPosition = pageSize.getHeight() - MARGIN;
-
-        while ((line = br.readLine()) != null) {
-            line = line.replace("\t", " ".repeat(TAB_WIDTH_SPACES)); // Convert tabs to spaces
-
-            while (line.length() > 0) {
-                int breakIndex = findLineBreakIndex(line, font, FONT_SIZE, pageWidth);
-                String textToWrite = line.substring(0, breakIndex).trim();
-                line = line.substring(breakIndex);
-
-                contentStream.showText(textToWrite);
-                contentStream.newLine();
-                yPosition -= LINE_SPACING;
-
-                if (yPosition < MARGIN) {
-                    contentStream.endText();
-                    contentStream.close();
-                    page = new PDPage(pageSize);
-                    document.addPage(page);
-                    contentStream = new PDPageContentStream(document, page);
-                    contentStream.setFont(font, FONT_SIZE);
-                    contentStream.setLeading(LINE_SPACING);
-                    contentStream.beginText();
-                    contentStream.newLineAtOffset(MARGIN, pageSize.getHeight() - MARGIN);
-                    yPosition = pageSize.getHeight() - MARGIN;
-                }
+        for (int i = 1; i < line.length(); i++) {
+            String subLine = line.substring(0, i);
+            float subWidth = font.getStringWidth(subLine) / 1000 * fontSize;
+            if (subWidth > maxWidth) {
+                breakIndex = i - 1;
+                break;
             }
         }
+
+        return breakIndex;
+    }
