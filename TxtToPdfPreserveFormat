@@ -1,20 +1,6 @@
-import org.apache.pdfbox.pdmodel.*;
-import org.apache.pdfbox.pdmodel.font.*;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import java.io.*;
-
-public class TxtToPdfConverter {
-    private static final float MARGIN = 50;
-    private static final float FONT_SIZE = 10;
-    private static final float LINE_SPACING = FONT_SIZE * 1.2f;
-    private static final int TAB_WIDTH_SPACES = 4; // Adjust tab width
-
-    public static void main(String[] args) throws IOException {
-        InputStream is = new FileInputStream("input.txt"); // Replace with your actual input stream
-        PDDocument document = new PDDocument();
         PDRectangle pageSize = PDRectangle.A4;
 
-        PDType1Font font = PDType1Font.COURIER; // Monospaced font for alignment
+        PDType1Font font = PDType1Font.COURIER; // Monospaced font for proper spacing
         float pageWidth = pageSize.getWidth() - 2 * MARGIN;
 
         PDPage page = new PDPage(pageSize);
@@ -30,54 +16,28 @@ public class TxtToPdfConverter {
         float yPosition = pageSize.getHeight() - MARGIN;
 
         while ((line = br.readLine()) != null) {
-            line = line.replace("\t", " ".repeat(TAB_WIDTH_SPACES)); // Preserve indentation
+            line = line.replace("\t", " ".repeat(TAB_WIDTH_SPACES)); // Convert tabs to spaces
 
-            float textWidth = font.getStringWidth(line) / 1000 * FONT_SIZE;
+            while (line.length() > 0) {
+                int breakIndex = findLineBreakIndex(line, font, FONT_SIZE, pageWidth);
+                String textToWrite = line.substring(0, breakIndex).trim();
+                line = line.substring(breakIndex);
 
-            if (textWidth > pageWidth) {
-                // Manually wrap text
-                String[] words = line.split(" ");
-                StringBuilder wrappedLine = new StringBuilder();
-                float currentWidth = 0;
+                contentStream.showText(textToWrite);
+                contentStream.newLine();
+                yPosition -= LINE_SPACING;
 
-                for (String word : words) {
-                    float wordWidth = font.getStringWidth(word + " ") / 1000 * FONT_SIZE;
-                    if (currentWidth + wordWidth > pageWidth) {
-                        contentStream.showText(wrappedLine.toString());
-                        contentStream.newLine();
-                        wrappedLine.setLength(0);
-                        currentWidth = 0;
-                    }
-                    wrappedLine.append(word).append(" ");
-                    currentWidth += wordWidth;
+                if (yPosition < MARGIN) {
+                    contentStream.endText();
+                    contentStream.close();
+                    page = new PDPage(pageSize);
+                    document.addPage(page);
+                    contentStream = new PDPageContentStream(document, page);
+                    contentStream.setFont(font, FONT_SIZE);
+                    contentStream.setLeading(LINE_SPACING);
+                    contentStream.beginText();
+                    contentStream.newLineAtOffset(MARGIN, pageSize.getHeight() - MARGIN);
+                    yPosition = pageSize.getHeight() - MARGIN;
                 }
-                contentStream.showText(wrappedLine.toString());
-            } else {
-                contentStream.showText(line);
-            }
-
-            contentStream.newLine();
-            yPosition -= LINE_SPACING;
-
-            if (yPosition < MARGIN) {
-                contentStream.endText();
-                contentStream.close();
-                page = new PDPage(pageSize);
-                document.addPage(page);
-                contentStream = new PDPageContentStream(document, page);
-                contentStream.setFont(font, FONT_SIZE);
-                contentStream.setLeading(LINE_SPACING);
-                contentStream.beginText();
-                contentStream.newLineAtOffset(MARGIN, pageSize.getHeight() - MARGIN);
-                yPosition = pageSize.getHeight() - MARGIN;
             }
         }
-
-        contentStream.endText();
-        contentStream.close();
-        br.close();
-
-        document.save("output.pdf");
-        document.close();
-    }
-}
