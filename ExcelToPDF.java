@@ -16,14 +16,14 @@ public class ExcelToPDFTable {
         pdf.addPage(page);
         PDPageContentStream contentStream = new PDPageContentStream(pdf, page);
 
-        contentStream.setFont(PDType1Font.HELVETICA, 10);
+        contentStream.setFont(PDType1Font.HELVETICA, 10);  // ✅ Use built-in font
         contentStream.setLeading(15);
-        
-        float margin = 50; 
-        float yStart = page.getMediaBox().getHeight() - 50; 
+
+        float margin = 50;
+        float yStart = page.getMediaBox().getHeight() - 50;
         float tableWidth = page.getMediaBox().getWidth() - 2 * margin;
         float rowHeight = 20;
-        int maxCols = getMaxColumns(workbook); 
+        int maxCols = getMaxColumns(workbook);
         float colWidth = tableWidth / maxCols;
 
         DataFormatter formatter = new DataFormatter();
@@ -35,7 +35,10 @@ public class ExcelToPDFTable {
             for (Row row : sheet) {
                 for (int i = 0; i < maxCols; i++) {
                     Cell cell = row.getCell(i, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
-                    String cellValue = formatter.formatCellValue(cell).trim(); // Converts formulas to values
+                    String cellValue = formatter.formatCellValue(cell).trim();
+
+                    // ✅ Fix: Convert unsupported characters
+                    cellValue = filterUnsupportedCharacters(cellValue);
 
                     contentStream.showText(cellValue.isEmpty() ? " " : wrapText(cellValue, colWidth));
                     contentStream.newLineAtOffset(colWidth, 0);
@@ -63,7 +66,7 @@ public class ExcelToPDFTable {
     }
 
     private static String wrapText(String text, float colWidth) {
-        int maxChars = (int) (colWidth / 5); 
+        int maxChars = (int) (colWidth / 5);
         StringBuilder wrapped = new StringBuilder();
         int i = 0;
         while (i < text.length()) {
@@ -71,5 +74,18 @@ public class ExcelToPDFTable {
             i += maxChars;
         }
         return wrapped.toString();
+    }
+
+    // ✅ Function to filter out unsupported characters
+    private static String filterUnsupportedCharacters(String text) {
+        StringBuilder filtered = new StringBuilder();
+        for (char c : text.toCharArray()) {
+            if (PDType1Font.HELVETICA.encode(Character.toString(c)) != null) {
+                filtered.append(c);
+            } else {
+                filtered.append("?"); // Replace unsupported characters
+            }
+        }
+        return filtered.toString();
     }
 }
