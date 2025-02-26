@@ -16,7 +16,8 @@ public class ExcelToPDFTable {
         pdf.addPage(page);
         PDPageContentStream contentStream = new PDPageContentStream(pdf, page);
 
-        contentStream.setFont(PDType1Font.HELVETICA, 10);  // ✅ Use built-in font
+        // ✅ Use Courier instead of Helvetica (more Unicode support)
+        contentStream.setFont(PDType1Font.COURIER, 10);
         contentStream.setLeading(15);
 
         float margin = 50;
@@ -66,7 +67,7 @@ public class ExcelToPDFTable {
     }
 
     private static String wrapText(String text, float colWidth) {
-        int maxChars = (int) (colWidth / 5);
+        int maxChars = (int) (colWidth / 6); // Adjust for Courier font spacing
         StringBuilder wrapped = new StringBuilder();
         int i = 0;
         while (i < text.length()) {
@@ -80,10 +81,15 @@ public class ExcelToPDFTable {
     private static String filterUnsupportedCharacters(String text) {
         StringBuilder filtered = new StringBuilder();
         for (char c : text.toCharArray()) {
-            if (PDType1Font.HELVETICA.encode(Character.toString(c)) != null) {
-                filtered.append(c);
-            } else {
-                filtered.append("?"); // Replace unsupported characters
+            try {
+                // Ensure character is renderable in PDFBox
+                if (PDType1Font.COURIER.encode(Character.toString(c)) != null) {
+                    filtered.append(c);
+                } else {
+                    filtered.append("?"); // Replace unsupported characters
+                }
+            } catch (Exception e) {
+                filtered.append("?"); // Catch any encoding issues
             }
         }
         return filtered.toString();
