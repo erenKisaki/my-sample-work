@@ -1,6 +1,9 @@
-String text = "Line 1\nLine 2\nLine 3";  // Example text with line breaks
-String[] lines = text.split("\n");
-for (String line : lines) {
-    contentStream.showText(line);
-    contentStream.newLineAtOffset(0, -15);  // Move down for next line
-}
+        window.onload = function () {
+            // Store the current page in history
+            history.pushState(null, null, location.href);
+
+            window.onpopstate = function () {
+                // When user presses back, redirect them to the same page
+                location.href = location.href;
+            };
+        };
