@@ -4,7 +4,6 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.poi.ss.usermodel.*;
 import java.io.*;
-import java.util.*;
 
 public class ExcelToPDFRefined {
     public static void convertExcelToPDF(byte[] excelData, OutputStream outputStream) throws IOException {
@@ -18,45 +17,46 @@ public class ExcelToPDFRefined {
             float tableWidth = PDRectangle.A4.getWidth() - 2 * margin;
             float rowHeight = 20;
             float cellMargin = 5;
-            PDType1Font font = PDType1Font.HELVETICA;
 
             for (Sheet sheet : workbook) {
-                List<List<String>> tableData = new ArrayList<>();
+                boolean hasContent = false;
                 for (Row row : sheet) {
-                    List<String> rowData = new ArrayList<>();
-                    boolean isEmptyRow = true;
                     for (Cell cell : row) {
-                        String cellValue = formatter.formatCellValue(cell).trim();
-                        rowData.add(cellValue);
-                        if (!cellValue.isEmpty()) isEmptyRow = false;
+                        if (!formatter.formatCellValue(cell).trim().isEmpty()) {
+                            hasContent = true;
+                            break;
+                        }
                     }
-                    if (!isEmptyRow) tableData.add(rowData);
+                    if (hasContent) break;
                 }
-                if (tableData.isEmpty()) continue;
-
+                if (!hasContent) continue; 
+                
                 PDPage page = new PDPage(PDRectangle.A4);
                 pdf.addPage(page);
                 PDPageContentStream contentStream = new PDPageContentStream(pdf, page);
-                contentStream.setFont(font, 10);
+                contentStream.setFont(PDType1Font.HELVETICA, 10);
+                
                 float yPosition = yStart - 30;
-                int numCols = tableData.get(0).size();
+                int numCols = sheet.getRow(0) != null ? sheet.getRow(0).getLastCellNum() : 0;
                 float colWidth = tableWidth / Math.max(1, numCols);
 
-                for (List<String> row : tableData) {
+                for (Row row : sheet) {
+                    boolean isEmptyRow = true;
+                    for (Cell cell : row) {
+                        if (!formatter.formatCellValue(cell).trim().isEmpty()) {
+                            isEmptyRow = false;
+                            break;
+                        }
+                    }
+                    if (isEmptyRow) continue;
+
                     float xPosition = margin;
-                    for (String cellValue : row) {
-                        drawCell(contentStream, xPosition, yPosition, colWidth, rowHeight, cellValue, cellMargin, font);
+                    for (Cell cell : row) {
+                        String cellValue = formatter.formatCellValue(cell).replaceAll("[\t\n\r]+", " "); // Remove control characters
+                        drawCell(contentStream, xPosition, yPosition, colWidth, rowHeight, cellValue, cellMargin);
                         xPosition += colWidth;
                     }
                     yPosition -= rowHeight;
-                    if (yPosition < margin) {
-                        contentStream.close();
-                        page = new PDPage(PDRectangle.A4);
-                        pdf.addPage(page);
-                        contentStream = new PDPageContentStream(pdf, page);
-                        contentStream.setFont(font, 10);
-                        yPosition = yStart - 30;
-                    }
                 }
                 contentStream.close();
             }
@@ -64,12 +64,12 @@ public class ExcelToPDFRefined {
         }
     }
 
-    private static void drawCell(PDPageContentStream contentStream, float x, float y, float width, float height, String text, float margin, PDType1Font font) throws IOException {
+    private static void drawCell(PDPageContentStream contentStream, float x, float y, float width, float height, String text, float margin) throws IOException {
         contentStream.setStrokingColor(0, 0, 0);
         contentStream.addRect(x, y, width, -height);
         contentStream.stroke();
         contentStream.beginText();
-        contentStream.setFont(font, 10);
+        contentStream.setFont(PDType1Font.HELVETICA, 10);
         contentStream.newLineAtOffset(x + margin, y - height + margin);
         contentStream.showText(text);
         contentStream.endText();
