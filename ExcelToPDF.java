@@ -2,15 +2,10 @@ import org.apache.pdfbox.pdmodel.*;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState;
 import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFPictureData;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-
 import java.io.*;
-import java.util.List;
 
-public class ExcelToPDFConverter {
+public class ExcelToPDFRefined {
     public static void convertExcelToPDF(byte[] excelData, OutputStream outputStream) throws IOException {
         try (InputStream inputStream = new ByteArrayInputStream(excelData);
              Workbook workbook = WorkbookFactory.create(inputStream);
@@ -24,30 +19,36 @@ public class ExcelToPDFConverter {
             float cellMargin = 5;
 
             for (Sheet sheet : workbook) {
+                boolean hasContent = false;
+                for (Row row : sheet) {
+                    for (Cell cell : row) {
+                        if (!formatter.formatCellValue(cell).trim().isEmpty()) {
+                            hasContent = true;
+                            break;
+                        }
+                    }
+                    if (hasContent) break;
+                }
+                if (!hasContent) continue; 
+                
                 PDPage page = new PDPage(PDRectangle.A4);
                 pdf.addPage(page);
                 PDPageContentStream contentStream = new PDPageContentStream(pdf, page);
-                
                 contentStream.setFont(PDType1Font.HELVETICA, 10);
-                contentStream.beginText();
-                contentStream.newLineAtOffset(margin, yStart);
-                contentStream.showText("Sheet: " + sheet.getSheetName());
-                contentStream.endText();
-
+                
                 float yPosition = yStart - 30;
                 int numCols = sheet.getRow(0) != null ? sheet.getRow(0).getLastCellNum() : 0;
-                float colWidth = tableWidth / (numCols == 0 ? 1 : numCols);
-
-                contentStream.setLineWidth(0.5f);
+                float colWidth = tableWidth / Math.max(1, numCols);
 
                 for (Row row : sheet) {
-                    if (yPosition < margin) {
-                        contentStream.close();
-                        page = new PDPage(PDRectangle.A4);
-                        pdf.addPage(page);
-                        contentStream = new PDPageContentStream(pdf, page);
-                        yPosition = yStart;
+                    boolean isEmptyRow = true;
+                    for (Cell cell : row) {
+                        if (!formatter.formatCellValue(cell).trim().isEmpty()) {
+                            isEmptyRow = false;
+                            break;
+                        }
                     }
+                    if (isEmptyRow) continue;
 
                     float xPosition = margin;
                     for (Cell cell : row) {
@@ -57,10 +58,8 @@ public class ExcelToPDFConverter {
                     }
                     yPosition -= rowHeight;
                 }
-
                 contentStream.close();
             }
-
             pdf.save(outputStream);
         }
     }
@@ -69,7 +68,6 @@ public class ExcelToPDFConverter {
         contentStream.setStrokingColor(0, 0, 0);
         contentStream.addRect(x, y, width, -height);
         contentStream.stroke();
-
         contentStream.beginText();
         contentStream.setFont(PDType1Font.HELVETICA, 10);
         contentStream.newLineAtOffset(x + margin, y - height + margin);
