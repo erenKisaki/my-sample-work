@@ -1,12 +1,14 @@
-private static String sanitizeText(String text) {
+    private static String sanitizeText(String text) {
         StringBuilder sanitizedText = new StringBuilder();
         for (char ch : text.toCharArray()) {
-            if (PDType1Font.COURIER.encode(Character.toString(ch)) != null) {
+            if (ch == '\f') { // Preserve Form Feed for handling page breaks
+                sanitizedText.append('\f');
+            } else if (PDType1Font.COURIER.encode(Character.toString(ch)) != null) {
                 sanitizedText.append(ch); // Keep supported characters
             } else if (Character.isWhitespace(ch)) {
-                sanitizedText.append(" "); // Preserve spaces
+                sanitizedText.append(ch); // Preserve whitespace characters (spaces, tabs)
             } else {
-                sanitizedText.append("?"); // Replace unsupported characters with '?'
+                sanitizedText.append("?"); // Replace unsupported characters (".notdef") with '?'
             }
         }
         return sanitizedText.toString();
