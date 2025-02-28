@@ -1,62 +1,78 @@
-        PDDocument pdf = new PDDocument();
-        
-        float margin = 50;
-        float tableWidth = PDRectangle.A4.getWidth() - 2 * margin;
-        float rowHeight = 20;
-        float colPadding = 5;
-        
-        // Determine column count
-        int maxCols = 0;
-        for (Sheet sheet : workbook) {
+
+            PDPage page = new PDPage(PDRectangle.A4);
+            pdfDocument.addPage(page);
+            PDPageContentStream contentStream = new PDPageContentStream(pdfDocument, page);
+            contentStream.setFont(PDType1Font.HELVETICA, 10);
+
+            float margin = 50;
+            float yPosition = page.getMediaBox().getHeight() - margin;
+            float tableWidth = page.getMediaBox().getWidth() - 2 * margin;
+            float rowHeight = 20;
+            float cellMargin = 2;
+
+            Sheet sheet = workbook.getSheetAt(0);
+            List<List<String>> tableData = new ArrayList<>();
+            int numColumns = sheet.getRow(0).getPhysicalNumberOfCells();
+            float[] columnWidths = new float[numColumns];
+
+            // Read data and calculate column widths
             for (Row row : sheet) {
-                maxCols = Math.max(maxCols, row.getLastCellNum());
+                List<String> rowData = new ArrayList<>();
+                for (int i = 0; i < numColumns; i++) {
+                    Cell cell = row.getCell(i, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+                    String value = cell.toString();
+                    rowData.add(value);
+
+                    float textWidth = PDType1Font.HELVETICA.getStringWidth(value) / 1000 * 10; // Scale to font size
+                    columnWidths[i] = Math.max(columnWidths[i], textWidth + cellMargin * 2);
+                }
+                tableData.add(rowData);
             }
-        }
 
-        // Dynamically distribute column widths
-        float colWidth = tableWidth / maxCols;
+            // Normalize column widths to fit within table width
+            float totalWidth = 0;
+            for (float width : columnWidths) {
+                totalWidth += width;
+            }
+            float scaleFactor = tableWidth / totalWidth;
+            for (int i = 0; i < columnWidths.length; i++) {
+                columnWidths[i] *= scaleFactor;
+            }
 
-        PDPage page = new PDPage(PDRectangle.A4);
-        pdf.addPage(page);
-        PDPageContentStream contentStream = new PDPageContentStream(pdf, page);
-        contentStream.setFont(PDType1Font.HELVETICA, 10);
-        contentStream.setLeading(14);
-        
-        float yStart = page.getMediaBox().getHeight() - margin;
-        float yPosition = yStart;
-        
-        for (Sheet sheet : workbook) {
-            for (Row row : sheet) {
+            // Draw table
+            for (List<String> row : tableData) {
                 if (yPosition - rowHeight < margin) {
                     contentStream.close();
                     page = new PDPage(PDRectangle.A4);
-                    pdf.addPage(page);
-                    contentStream = new PDPageContentStream(pdf, page);
+                    pdfDocument.addPage(page);
+                    contentStream = new PDPageContentStream(pdfDocument, page);
                     contentStream.setFont(PDType1Font.HELVETICA, 10);
-                    yPosition = yStart;
+                    yPosition = page.getMediaBox().getHeight() - margin;
                 }
 
                 float xPosition = margin;
-                for (int i = 0; i < maxCols; i++) {
-                    Cell cell = row.getCell(i, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
-                    String value = getCellValue(cell, workbook.getCreationHelper().createFormulaEvaluator());
+                for (int i = 0; i < row.size(); i++) {
+                    String text = row.get(i);
+                    float colWidth = columnWidths[i];
 
                     // Draw cell border
-                    contentStream.setStrokingColor(Color.BLACK);
-                    contentStream.addRect(xPosition, yPosition - rowHeight, colWidth, rowHeight);
-                    contentStream.stroke();
+                    contentStream.setLineWidth(1);
+                    contentStream.moveTo(xPosition, yPosition);
+                    contentStream.lineTo(xPosition + colWidth, yPosition);
+                    contentStream.lineTo(xPosition + colWidth, yPosition - rowHeight);
+                    contentStream.lineTo(xPosition, yPosition - rowHeight);
+                    contentStream.closeAndStroke();
 
-                    // Handle text wrapping
+                    // Draw text
                     contentStream.beginText();
-                    contentStream.newLineAtOffset(xPosition + colPadding, yPosition - 15);
-                    drawWrappedText(contentStream, value, colWidth - (2 * colPadding));
+                    contentStream.newLineAtOffset(xPosition + cellMargin, yPosition - 15);
+                    contentStream.showText(text);
                     contentStream.endText();
 
                     xPosition += colWidth;
                 }
                 yPosition -= rowHeight;
             }
-        }
         contentStream.close();
         
         // Process images below the table
