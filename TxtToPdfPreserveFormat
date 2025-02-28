@@ -25,33 +25,34 @@ public class TxtToPdfConverter {
         contentStream.beginText();
         contentStream.newLineAtOffset(MARGIN, pageSize.getHeight() - MARGIN);
 
-        BufferedReader br = new BufferedReader(new InputStreamReader(txtInputStream, "UTF-8"));
-        String line;
-        float yPosition = pageSize.getHeight() - MARGIN;
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(txtInputStream, "UTF-8"))) {
+            String line;
+            float yPosition = pageSize.getHeight() - MARGIN;
 
-        while ((line = br.readLine()) != null) {
-            line = line.replace("\t", " ".repeat(TAB_WIDTH_SPACES)); // Convert tabs to spaces
+            while ((line = br.readLine()) != null) {
+                line = line.replace("\t", new String(new char[TAB_WIDTH_SPACES]).replace("\0", " ")); // Convert tabs to spaces
 
-            List<String> wrappedLines = wrapText(line, font, FONT_SIZE, pageWidth);
+                List<String> wrappedLines = wrapText(line, font, FONT_SIZE, pageWidth);
 
-            for (String wrappedLine : wrappedLines) {
-                contentStream.showText(wrappedLine);
-                contentStream.newLine();
-                yPosition -= LINE_SPACING;
+                for (String wrappedLine : wrappedLines) {
+                    contentStream.showText(wrappedLine);
+                    contentStream.newLine();
+                    yPosition -= LINE_SPACING;
 
-                // If reaching the bottom, start a new page
-                if (yPosition < MARGIN) {
-                    contentStream.endText();
-                    contentStream.close();
+                    // If reaching the bottom, start a new page
+                    if (yPosition < MARGIN) {
+                        contentStream.endText();
+                        contentStream.close();
 
-                    page = new PDPage(pageSize);
-                    document.addPage(page);
-                    contentStream = new PDPageContentStream(document, page);
-                    contentStream.setFont(font, FONT_SIZE);
-                    contentStream.setLeading(LINE_SPACING);
-                    contentStream.beginText();
-                    contentStream.newLineAtOffset(MARGIN, pageSize.getHeight() - MARGIN);
-                    yPosition = pageSize.getHeight() - MARGIN;
+                        page = new PDPage(pageSize);
+                        document.addPage(page);
+                        contentStream = new PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, true);
+                        contentStream.setFont(font, FONT_SIZE);
+                        contentStream.setLeading(LINE_SPACING);
+                        contentStream.beginText();
+                        contentStream.newLineAtOffset(MARGIN, pageSize.getHeight() - MARGIN);
+                        yPosition = pageSize.getHeight() - MARGIN;
+                    }
                 }
             }
         }
@@ -60,7 +61,6 @@ public class TxtToPdfConverter {
         contentStream.close();
         document.save(pdfOutputStream);
         document.close();
-        br.close();
     }
 
     /**
@@ -73,18 +73,18 @@ public class TxtToPdfConverter {
         float spaceWidth = font.getStringWidth(" ") / 1000 * fontSize;
 
         for (String word : words) {
-            float textWidth = font.getStringWidth(currentLine + word) / 1000 * fontSize;
+            float textWidth = font.getStringWidth(currentLine.toString() + word) / 1000 * fontSize;
             if (textWidth > maxWidth) {
                 wrappedLines.add(currentLine.toString().trim());
                 currentLine = new StringBuilder(word);
             } else {
-                if (!currentLine.isEmpty()) {
+                if (currentLine.length() > 0) {
                     currentLine.append(" ");
                 }
                 currentLine.append(word);
             }
         }
-        if (!currentLine.isEmpty()) {
+        if (currentLine.length() > 0) {
             wrappedLines.add(currentLine.toString());
         }
 
