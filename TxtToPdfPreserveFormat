@@ -1,102 +1,13 @@
-import org.apache.pdfbox.pdmodel.*;
-import org.apache.pdfbox.pdmodel.font.*;
-
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-
-public class TxtToPdfConverter {
-    private static final float MARGIN = 50;
-    private static final float FONT_SIZE = 10;
-    private static final float LINE_SPACING = FONT_SIZE * 1.2f;
-    private static final int TAB_WIDTH_SPACES = 4; // Adjust tab width if needed
-
-    public static void convertTxtToPdf(InputStream txtInputStream, OutputStream pdfOutputStream) throws Exception {
-        PDDocument document = new PDDocument();
-        PDRectangle pageSize = PDRectangle.A4;
-        float pageWidth = pageSize.getWidth() - 2 * MARGIN;
-        PDType1Font font = PDType1Font.COURIER; // Built-in monospaced font
-
-        PDPage page = new PDPage(pageSize);
-        document.addPage(page);
-        PDPageContentStream contentStream = new PDPageContentStream(document, page);
-        contentStream.setFont(font, FONT_SIZE);
-        contentStream.setLeading(LINE_SPACING);
-        contentStream.beginText();
-        contentStream.newLineAtOffset(MARGIN, pageSize.getHeight() - MARGIN);
-
-        try (BufferedReader br = new BufferedReader(new InputStreamReader(txtInputStream, "UTF-8"))) {
-            String line;
-            float yPosition = pageSize.getHeight() - MARGIN;
-
-            while ((line = br.readLine()) != null) {
-                line = line.replace("\t", new String(new char[TAB_WIDTH_SPACES]).replace("\0", " ")); // Convert tabs to spaces
-
-                List<String> wrappedLines = wrapText(line, font, FONT_SIZE, pageWidth);
-
-                for (String wrappedLine : wrappedLines) {
-                    contentStream.showText(wrappedLine);
-                    contentStream.newLine();
-                    yPosition -= LINE_SPACING;
-
-                    // If reaching the bottom, start a new page
-                    if (yPosition < MARGIN) {
-                        contentStream.endText();
-                        contentStream.close();
-
-                        page = new PDPage(pageSize);
-                        document.addPage(page);
-                        contentStream = new PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, true);
-                        contentStream.setFont(font, FONT_SIZE);
-                        contentStream.setLeading(LINE_SPACING);
-                        contentStream.beginText();
-                        contentStream.newLineAtOffset(MARGIN, pageSize.getHeight() - MARGIN);
-                        yPosition = pageSize.getHeight() - MARGIN;
-                    }
-                }
-            }
-        }
-
-        contentStream.endText();
-        contentStream.close();
-        document.save(pdfOutputStream);
-        document.close();
-    }
-
-    /**
-     * Wraps text to fit within the given width without breaking words.
-     */
-    private static List<String> wrapText(String text, PDType1Font font, float fontSize, float maxWidth) {
-        List<String> wrappedLines = new ArrayList<>();
-        String[] words = text.split(" ");
-        StringBuilder currentLine = new StringBuilder();
-        float spaceWidth = font.getStringWidth(" ") / 1000 * fontSize;
-
-        for (String word : words) {
-            float textWidth = font.getStringWidth(currentLine.toString() + word) / 1000 * fontSize;
-            if (textWidth > maxWidth) {
-                wrappedLines.add(currentLine.toString().trim());
-                currentLine = new StringBuilder(word);
+private static String sanitizeText(String text) {
+        StringBuilder sanitizedText = new StringBuilder();
+        for (char ch : text.toCharArray()) {
+            if (PDType1Font.COURIER.encode(Character.toString(ch)) != null) {
+                sanitizedText.append(ch); // Keep supported characters
+            } else if (Character.isWhitespace(ch)) {
+                sanitizedText.append(" "); // Preserve spaces
             } else {
-                if (currentLine.length() > 0) {
-                    currentLine.append(" ");
-                }
-                currentLine.append(word);
+                sanitizedText.append("?"); // Replace unsupported characters with '?'
             }
         }
-        if (currentLine.length() > 0) {
-            wrappedLines.add(currentLine.toString());
-        }
-
-        return wrappedLines;
+        return sanitizedText.toString();
     }
-
-    public static void main(String[] args) throws Exception {
-        FileInputStream txtInput = new FileInputStream("input.txt");
-        FileOutputStream pdfOutput = new FileOutputStream("output.pdf");
-        convertTxtToPdf(txtInput, pdfOutput);
-        txtInput.close();
-        pdfOutput.close();
-        System.out.println("Conversion successful!");
-    }
-}
