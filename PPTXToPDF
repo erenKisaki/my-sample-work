@@ -8,40 +8,58 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 
-public class PPTXToPDF {
-    public static void main(String[] args) throws Exception {
-        FileInputStream fis = new FileInputStream("input.pptx");
-        XMLSlideShow ppt = new XMLSlideShow(fis);
-        PDDocument pdf = new PDDocument();
+public class PPTXToPDFConverter {
+    public static byte[] convertPPTXToPDF(byte[] pptData) throws IOException {
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(pptData);
+             ByteArrayOutputStream pdfOutputStream = new ByteArrayOutputStream();
+             PDDocument pdfDocument = new PDDocument()) {
 
-        for (XSLFSlide slide : ppt.getSlides()) {
-            int width = 800, height = 600;
-            BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-            Graphics2D graphics = img.createGraphics();
-            graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            graphics.setColor(Color.WHITE);
-            graphics.fillRect(0, 0, width, height);
-            slide.draw(graphics);
-            graphics.dispose();
+            XMLSlideShow ppt = new XMLSlideShow(inputStream);
+            Dimension slideSize = ppt.getPageSize();
+            
+            for (XSLFSlide slide : ppt.getSlides()) {
+                // High-resolution image for better quality
+                int width = slideSize.width * 2;
+                int height = slideSize.height * 2;
+                
+                BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+                Graphics2D graphics = img.createGraphics();
 
-            // Save slide as image
-            File tempImage = File.createTempFile("slide", ".png");
-            ImageIO.write(img, "png", tempImage);
+                // Enable anti-aliasing for better text rendering
+                graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                graphics.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                
+                // Transparent background
+                graphics.setComposite(AlphaComposite.Clear);
+                graphics.fillRect(0, 0, width, height);
+                graphics.setComposite(AlphaComposite.SrcOver);
+                graphics.setColor(Color.WHITE);
+                graphics.fillRect(0, 0, width, height);
 
-            // Add image to PDF
-            PDPage page = new PDPage(PDRectangle.A4);
-            pdf.addPage(page);
-            PDPageContentStream contentStream = new PDPageContentStream(pdf, page);
-            PDImageXObject pdImage = PDImageXObject.createFromFile(tempImage.getAbsolutePath(), pdf);
-            contentStream.drawImage(pdImage, 50, 100, 500, 400);
-            contentStream.close();
+                // Render slide
+                slide.draw(graphics);
+                graphics.dispose();
+
+                // Convert BufferedImage to PDImageXObject
+                PDPage page = new PDPage(new PDRectangle(width / 2, height / 2)); // Scale down for PDF
+                pdfDocument.addPage(page);
+
+                PDImageXObject pdImage = PDImageXObject.createFromByteArray(pdfDocument, toByteArray(img), "slide");
+                try (PDPageContentStream contentStream = new PDPageContentStream(pdfDocument, page)) {
+                    contentStream.drawImage(pdImage, 0, 0, width / 2, height / 2);
+                }
+            }
+
+            pdfDocument.save(pdfOutputStream);
+            return pdfOutputStream.toByteArray();
         }
+    }
 
-        pdf.save("output.pdf");
-        pdf.close();
-        ppt.close();
-        fis.close();
-
-        System.out.println("PPTX to PDF conversion completed!");
+    // Convert BufferedImage to byte array (PNG format)
+    private static byte[] toByteArray(BufferedImage image) throws IOException {
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", outputStream);
+        return outputStream.toByteArray();
     }
 }
