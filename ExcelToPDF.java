@@ -1,58 +1,67 @@
-   PDDocument pdf = new PDDocument();
+        PDDocument pdf = new PDDocument();
+        
+        float margin = 50;
+        float tableWidth = PDRectangle.A4.getWidth() - 2 * margin;
+        float rowHeight = 20;
+        float colPadding = 5;
+        
+        // Determine column count
+        int maxCols = 0;
+        for (Sheet sheet : workbook) {
+            for (Row row : sheet) {
+                maxCols = Math.max(maxCols, row.getLastCellNum());
+            }
+        }
+
+        // Dynamically distribute column widths
+        float colWidth = tableWidth / maxCols;
+
         PDPage page = new PDPage(PDRectangle.A4);
         pdf.addPage(page);
-
         PDPageContentStream contentStream = new PDPageContentStream(pdf, page);
         contentStream.setFont(PDType1Font.HELVETICA, 10);
         contentStream.setLeading(14);
         
-        float margin = 50;
         float yStart = page.getMediaBox().getHeight() - margin;
-        float tableWidth = page.getMediaBox().getWidth() - 2 * margin;
-        float rowHeight = 20;
-        float tableX = margin;
-        float tableY = yStart;
-
-        float[] colWidths = {70, 50, 90, 90, 80, 100, 60, 80, 80, 80, 100, 100};
-        int numCols = colWidths.length;
-
+        float yPosition = yStart;
+        
         for (Sheet sheet : workbook) {
             for (Row row : sheet) {
-                if (tableY < margin + rowHeight) {
+                if (yPosition - rowHeight < margin) {
                     contentStream.close();
                     page = new PDPage(PDRectangle.A4);
                     pdf.addPage(page);
                     contentStream = new PDPageContentStream(pdf, page);
                     contentStream.setFont(PDType1Font.HELVETICA, 10);
-                    tableY = yStart;
+                    yPosition = yStart;
                 }
 
-                float x = tableX;
-                for (int i = 0; i < Math.min(numCols, row.getLastCellNum()); i++) {
+                float xPosition = margin;
+                for (int i = 0; i < maxCols; i++) {
                     Cell cell = row.getCell(i, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
                     String value = getCellValue(cell, workbook.getCreationHelper().createFormulaEvaluator());
 
                     // Draw cell border
                     contentStream.setStrokingColor(Color.BLACK);
-                    contentStream.addRect(x, tableY - rowHeight, colWidths[i], rowHeight);
+                    contentStream.addRect(xPosition, yPosition - rowHeight, colWidth, rowHeight);
                     contentStream.stroke();
 
-                    // Write text
+                    // Handle text wrapping
                     contentStream.beginText();
-                    contentStream.newLineAtOffset(x + 2, tableY - 15);
-                    contentStream.showText(value);
+                    contentStream.newLineAtOffset(xPosition + colPadding, yPosition - 15);
+                    drawWrappedText(contentStream, value, colWidth - (2 * colPadding));
                     contentStream.endText();
 
-                    x += colWidths[i];
+                    xPosition += colWidth;
                 }
-                tableY -= rowHeight;
+                yPosition -= rowHeight;
             }
         }
         contentStream.close();
-
-        // Handle images and move them to the next available area
+        
+        // Process images below the table
         float imgX = margin;
-        float imgY = tableY - 100;
+        float imgY = yPosition - 100;
         for (HSSFPictureData picture : workbook.getAllPictures()) {
             if (imgY < margin + 100) {
                 page = new PDPage(PDRectangle.A4);
@@ -71,5 +80,5 @@
             imgStream.drawImage(pdImage, imgX, imgY, 200, 150);
             imgStream.close();
 
-            imgY -= 160; // Move down for the next image
+            imgY -= 160;
         }
