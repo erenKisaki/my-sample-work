@@ -1,70 +1,75 @@
-      PDDocument pdf = new PDDocument();
+   PDDocument pdf = new PDDocument();
         PDPage page = new PDPage(PDRectangle.A4);
         pdf.addPage(page);
 
         PDPageContentStream contentStream = new PDPageContentStream(pdf, page);
         contentStream.setFont(PDType1Font.HELVETICA, 10);
         contentStream.setLeading(14);
-
+        
         float margin = 50;
         float yStart = page.getMediaBox().getHeight() - margin;
         float tableWidth = page.getMediaBox().getWidth() - 2 * margin;
         float rowHeight = 20;
-        float yPosition = yStart;
         float tableX = margin;
+        float tableY = yStart;
 
-        // Define column widths (adjust as needed)
         float[] colWidths = {70, 50, 90, 90, 80, 100, 60, 80, 80, 80, 100, 100};
         int numCols = colWidths.length;
 
-        FormulaEvaluator evaluator = workbook.getCreationHelper().createFormulaEvaluator();
-
         for (Sheet sheet : workbook) {
             for (Row row : sheet) {
-                // If not enough space, move to a new page
-                if (yPosition - rowHeight < margin) {
+                if (tableY < margin + rowHeight) {
                     contentStream.close();
                     page = new PDPage(PDRectangle.A4);
                     pdf.addPage(page);
                     contentStream = new PDPageContentStream(pdf, page);
                     contentStream.setFont(PDType1Font.HELVETICA, 10);
-                    yPosition = yStart;
+                    tableY = yStart;
                 }
 
                 float x = tableX;
-                for (int i = 0; i < numCols; i++) {
+                for (int i = 0; i < Math.min(numCols, row.getLastCellNum()); i++) {
                     Cell cell = row.getCell(i, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
-                    String value = getCellValue(cell, evaluator);
+                    String value = getCellValue(cell, workbook.getCreationHelper().createFormulaEvaluator());
 
                     // Draw cell border
                     contentStream.setStrokingColor(Color.BLACK);
-                    contentStream.addRect(x, yPosition - rowHeight, colWidths[i], rowHeight);
+                    contentStream.addRect(x, tableY - rowHeight, colWidths[i], rowHeight);
                     contentStream.stroke();
 
-                    // Write text with wrapping if necessary
+                    // Write text
                     contentStream.beginText();
-                    contentStream.newLineAtOffset(x + 2, yPosition - 15);
-                    contentStream.showText(value.length() > 15 ? value.substring(0, 15) + "..." : value); // Truncate if needed
+                    contentStream.newLineAtOffset(x + 2, tableY - 15);
+                    contentStream.showText(value);
                     contentStream.endText();
 
                     x += colWidths[i];
                 }
-                yPosition -= rowHeight;
+                tableY -= rowHeight;
             }
         }
         contentStream.close();
 
-        // Handle images
+        // Handle images and move them to the next available area
+        float imgX = margin;
+        float imgY = tableY - 100;
         for (HSSFPictureData picture : workbook.getAllPictures()) {
+            if (imgY < margin + 100) {
+                page = new PDPage(PDRectangle.A4);
+                pdf.addPage(page);
+                imgX = margin;
+                imgY = yStart - 100;
+            }
+
             byte[] imageBytes = picture.getData();
             BufferedImage bImage = ImageIO.read(new ByteArrayInputStream(imageBytes));
             File imageFile = File.createTempFile("excel_image", ".png");
             ImageIO.write(bImage, "png", imageFile);
             PDImageXObject pdImage = PDImageXObject.createFromFile(imageFile.getAbsolutePath(), pdf);
 
-            PDPage imgPage = new PDPage(PDRectangle.A4);
-            pdf.addPage(imgPage);
-            PDPageContentStream imgStream = new PDPageContentStream(pdf, imgPage);
-            imgStream.drawImage(pdImage, 50, 200, 400, 300);
+            PDPageContentStream imgStream = new PDPageContentStream(pdf, page, PDPageContentStream.AppendMode.APPEND, true);
+            imgStream.drawImage(pdImage, imgX, imgY, 200, 150);
             imgStream.close();
+
+            imgY -= 160; // Move down for the next image
         }
