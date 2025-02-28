@@ -1,9 +1,1 @@
-        window.onload = function () {
-            // Store the current page in history
-            history.pushState(null, null, location.href);
-
-            window.onpopstate = function () {
-                // When user presses back, redirect them to the same page
-                location.href = location.href;
-            };
-        };
+openssl pkeyutl -decrypt -in decoded_data.bin -inkey private.pem -pkeyopt rsa_padding_mode:pkcs1 -out client_secret.txt
