@@ -1,11 +1,43 @@
-   public static boolean isGif(byte[] data) {
-        if (data.length < 6) {
-            return false; // A valid GIF header must be at least 6 bytes long
+import org.apache.pdfbox.pdmodel.*;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.*;
+
+public class GifByteArrayToPdf {
+
+    // Function to convert a GIF byte array to a PDF byte array
+    public static byte[] convertGifToPdf(byte[] gifBytes) throws IOException {
+        // Convert byte array to BufferedImage
+        InputStream inputStream = new ByteArrayInputStream(gifBytes);
+        BufferedImage image = ImageIO.read(inputStream);
+        
+        if (image == null) {
+            throw new IOException("Invalid GIF format or unable to read image.");
         }
 
-        // Check for "GIF87a" or "GIF89a" in ASCII
-        return (data[0] == 'G' && data[1] == 'I' && data[2] == 'F' &&
-                data[3] == '8' &&
-                (data[4] == '7' || data[4] == '9') &&
-                data[5] == 'a');
+        // Create a new PDF document
+        try (PDDocument document = new PDDocument();
+             ByteArrayOutputStream pdfOutputStream = new ByteArrayOutputStream()) {
+
+            // Create a PDF page matching the image dimensions
+            PDRectangle rectangle = new PDRectangle(image.getWidth(), image.getHeight());
+            PDPage page = new PDPage(rectangle);
+            document.addPage(page);
+
+            // Convert the BufferedImage to a PDF image object
+            PDImageXObject pdImage = PDImageXObject.createFromByteArray(document, gifBytes, "gifImage");
+
+            // Draw the image onto the PDF page
+            try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
+                contentStream.drawImage(pdImage, 0, 0, image.getWidth(), image.getHeight());
+            }
+
+            // Save PDF to byte array
+            document.save(pdfOutputStream);
+            return pdfOutputStream.toByteArray();
+        }
     }
+}
