@@ -1,12 +1,8 @@
-        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(afpFile)) {
-            byte[] header = new byte[6];
-            if (inputStream.read(header) != 6) {
-                return false;
-            }
-
-            // Convert first three unsigned shorts
-            ByteBuffer buffer = ByteBuffer.wrap(header);
-            buffer.order(ByteOrder.BIG_ENDIAN);
-            int firstShort = buffer.getShort() & 0xFFFF;
-            int secShort = buffer.getShort() & 0xFFFF;
-            int thirdShort = buffer.getShort() & 0xFFFF;
+ ImageReadParam param = reader.getDefaultReadParam();
+                            param.setSourceSubsampling(1, 1, 0, 0);
+                            BufferedImage bufferedImage = reader.read(p, param);
+                            
+                            if (bufferedImage == null) {
+                                LOG.warn("Skipping null image at page {}", p);
+                                continue;
+                            }
