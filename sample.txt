@@ -1,8 +1,56 @@
- ImageReadParam param = reader.getDefaultReadParam();
-                            param.setSourceSubsampling(1, 1, 0, 0);
-                            BufferedImage bufferedImage = reader.read(p, param);
-                            
-                            if (bufferedImage == null) {
-                                LOG.warn("Skipping null image at page {}", p);
-                                continue;
-                            }
+/ Get TIFF reader
+            Iterator<ImageReader> iterator = ImageIO.getImageReaders(iis);
+            if (!iterator.hasNext()) {
+                throw new IOException("No suitable TIFF ImageReader found.");
+            }
+            ImageReader reader = iterator.next();
+            reader.setInput(iis, false, true);
+
+            int minIndex = reader.getMinIndex();
+            int nbPages = reader.getNumImages(true);
+            LOG.info("Total pages in TIFF: {}", nbPages);
+
+            // Validate page count
+            if (nbPages < 1) {
+                throw new IOException("Invalid TIFF file: No images found.");
+            }
+
+            // Process each page
+            for (int pageIndex = minIndex; pageIndex < nbPages; pageIndex++) {
+                try {
+                    // Get image dimensions
+                    int width = reader.getWidth(pageIndex);
+                    int height = reader.getHeight(pageIndex);
+                    LOG.info("Processing page {} - Width: {}, Height: {}", pageIndex, width, height);
+
+                    // Skip large images if necessary
+                    if (width > 20000 || height > 20000) {
+                        LOG.warn("Skipping extremely large image at page {}", pageIndex);
+                        continue;
+                    }
+
+                    // Read TIFF image efficiently using subsampling
+                    ImageReadParam param = reader.getDefaultReadParam();
+                    param.setSourceSubsampling(2, 2, 0, 0);  // Reduce memory usage
+                    BufferedImage bufferedImage = reader.read(pageIndex, param);
+
+                    if (bufferedImage == null) {
+                        LOG.warn("Skipping null image at page {}", pageIndex);
+                        continue;
+                    }
+
+                    // Create PDF page
+                    PDPage page = new PDPage(new PDRectangle(width, height));
+                    document.addPage(page);
+
+                    // Convert BufferedImage to PDF image
+                    PDImageXObject pdImage = LosslessFactory.createFromImage(document, bufferedImage);
+                    try (var content = new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
+                        content.drawImage(pdImage, 0, 0, width, height);
+                    }
+                } catch (IndexOutOfBoundsException ex) {
+                    LOG.error("Skipping page {} due to IndexOutOfBoundsException: {}", pageIndex, ex.getMessage());
+                } catch (IOException ex) {
+                    LOG.error("Skipping page {} due to IOException: {}", pageIndex, ex.getMessage());
+                }
+            }
