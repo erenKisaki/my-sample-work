@@ -1,19 +1,12 @@
-    public static String detectFileType(byte[] fileBytes) {
-        if (fileBytes.length < 4) {
-            return "Unknown"; // Not enough data
-        }
+        try (ByteArrayInputStream inputStream = new ByteArrayInputStream(afpFile)) {
+            byte[] header = new byte[6];
+            if (inputStream.read(header) != 6) {
+                return false;
+            }
 
-        // Check for PDF signature (%PDF)
-        if (fileBytes[0] == 0x25 && fileBytes[1] == 0x50 &&
-            fileBytes[2] == 0x44 && fileBytes[3] == 0x46) {
-            return "PDF";
-        }
-
-        // Check for TIFF signature (II* or MM*)
-        if ((fileBytes[0] == 0x49 && fileBytes[1] == 0x49 && fileBytes[2] == 0x2A && fileBytes[3] == 0x00) ||
-            (fileBytes[0] == 0x4D && fileBytes[1] == 0x4D && fileBytes[2] == 0x00 && fileBytes[3] == 0x2A)) {
-            return "TIFF";
-        }
-
-        return "Unknown";
-    }
+            // Convert first three unsigned shorts
+            ByteBuffer buffer = ByteBuffer.wrap(header);
+            buffer.order(ByteOrder.BIG_ENDIAN);
+            int firstShort = buffer.getShort() & 0xFFFF;
+            int secShort = buffer.getShort() & 0xFFFF;
+            int thirdShort = buffer.getShort() & 0xFFFF;
