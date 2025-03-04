@@ -1,43 +1,19 @@
-import org.apache.pdfbox.pdmodel.*;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
-
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.*;
-
-public class GifByteArrayToPdf {
-
-    // Function to convert a GIF byte array to a PDF byte array
-    public static byte[] convertGifToPdf(byte[] gifBytes) throws IOException {
-        // Convert byte array to BufferedImage
-        InputStream inputStream = new ByteArrayInputStream(gifBytes);
-        BufferedImage image = ImageIO.read(inputStream);
-        
-        if (image == null) {
-            throw new IOException("Invalid GIF format or unable to read image.");
+    public static String detectFileType(byte[] fileBytes) {
+        if (fileBytes.length < 4) {
+            return "Unknown"; // Not enough data
         }
 
-        // Create a new PDF document
-        try (PDDocument document = new PDDocument();
-             ByteArrayOutputStream pdfOutputStream = new ByteArrayOutputStream()) {
-
-            // Create a PDF page matching the image dimensions
-            PDRectangle rectangle = new PDRectangle(image.getWidth(), image.getHeight());
-            PDPage page = new PDPage(rectangle);
-            document.addPage(page);
-
-            // Convert the BufferedImage to a PDF image object
-            PDImageXObject pdImage = PDImageXObject.createFromByteArray(document, gifBytes, "gifImage");
-
-            // Draw the image onto the PDF page
-            try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
-                contentStream.drawImage(pdImage, 0, 0, image.getWidth(), image.getHeight());
-            }
-
-            // Save PDF to byte array
-            document.save(pdfOutputStream);
-            return pdfOutputStream.toByteArray();
+        // Check for PDF signature (%PDF)
+        if (fileBytes[0] == 0x25 && fileBytes[1] == 0x50 &&
+            fileBytes[2] == 0x44 && fileBytes[3] == 0x46) {
+            return "PDF";
         }
+
+        // Check for TIFF signature (II* or MM*)
+        if ((fileBytes[0] == 0x49 && fileBytes[1] == 0x49 && fileBytes[2] == 0x2A && fileBytes[3] == 0x00) ||
+            (fileBytes[0] == 0x4D && fileBytes[1] == 0x4D && fileBytes[2] == 0x00 && fileBytes[3] == 0x2A)) {
+            return "TIFF";
+        }
+
+        return "Unknown";
     }
-}
