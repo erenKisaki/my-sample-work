@@ -1,56 +1,23 @@
-/ Get TIFF reader
-            Iterator<ImageReader> iterator = ImageIO.getImageReaders(iis);
-            if (!iterator.hasNext()) {
-                throw new IOException("No suitable TIFF ImageReader found.");
-            }
-            ImageReader reader = iterator.next();
-            reader.setInput(iis, false, true);
-
-            int minIndex = reader.getMinIndex();
-            int nbPages = reader.getNumImages(true);
-            LOG.info("Total pages in TIFF: {}", nbPages);
-
-            // Validate page count
-            if (nbPages < 1) {
-                throw new IOException("Invalid TIFF file: No images found.");
+ // Read TIFF as BufferedImage
+            BufferedImage image = ImageIO.read(is);
+            if (image == null) {
+                throw new RuntimeException("Failed to read TIFF image.");
             }
 
-            // Process each page
-            for (int pageIndex = minIndex; pageIndex < nbPages; pageIndex++) {
-                try {
-                    // Get image dimensions
-                    int width = reader.getWidth(pageIndex);
-                    int height = reader.getHeight(pageIndex);
-                    LOG.info("Processing page {} - Width: {}, Height: {}", pageIndex, width, height);
+            try (PDDocument document = new PDDocument()) {
+                // Convert BufferedImage to PDImageXObject
+                ByteArrayOutputStream imageStream = new ByteArrayOutputStream();
+                ImageIO.write(image, "png", imageStream);
+                PDImageXObject pdImage = PDImageXObject.createFromByteArray(document, imageStream.toByteArray(), "TIFF_Page");
 
-                    // Skip large images if necessary
-                    if (width > 20000 || height > 20000) {
-                        LOG.warn("Skipping extremely large image at page {}", pageIndex);
-                        continue;
-                    }
+                // Create a PDF page matching the image size
+                PDRectangle pageSize = new PDRectangle(pdImage.getWidth(), pdImage.getHeight());
+                PDPage page = new PDPage(pageSize);
+                document.addPage(page);
 
-                    // Read TIFF image efficiently using subsampling
-                    ImageReadParam param = reader.getDefaultReadParam();
-                    param.setSourceSubsampling(2, 2, 0, 0);  // Reduce memory usage
-                    BufferedImage bufferedImage = reader.read(pageIndex, param);
-
-                    if (bufferedImage == null) {
-                        LOG.warn("Skipping null image at page {}", pageIndex);
-                        continue;
-                    }
-
-                    // Create PDF page
-                    PDPage page = new PDPage(new PDRectangle(width, height));
-                    document.addPage(page);
-
-                    // Convert BufferedImage to PDF image
-                    PDImageXObject pdImage = LosslessFactory.createFromImage(document, bufferedImage);
-                    try (var content = new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
-                        content.drawImage(pdImage, 0, 0, width, height);
-                    }
-                } catch (IndexOutOfBoundsException ex) {
-                    LOG.error("Skipping page {} due to IndexOutOfBoundsException: {}", pageIndex, ex.getMessage());
-                } catch (IOException ex) {
-                    LOG.error("Skipping page {} due to IOException: {}", pageIndex, ex.getMessage());
+                try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
+                    contentStream.drawImage(pdImage, 0, 0, pdImage.getWidth(), pdImage.getHeight());
                 }
+
+                document.save(os);
             }
