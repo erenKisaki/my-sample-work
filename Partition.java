@@ -1,76 +1,41 @@
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFPictureData;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
-import org.apache.pdfbox.pdmodel.*;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
-import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
+public static byte[] convertAFPtoPDF(final byte[] afpFile) throws HdpException {
+    LOG.info("Inside the method of convertAFPtoPDF");
+    try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+        List<byte[]> tiffImgList = AFPConverter.processAfpFile(afpFile);
+        try (PDDocument document = new PDDocument()) {
+            tiffImgList.stream().forEach(tiffImg -> {
+                try {
+                    InputStream is = new ByteArrayInputStream(tiffImg);
+                    ImageInputStream iis = ImageIO.createImageInputStream(is);
+                    Iterator<ImageReader> iterator = ImageIO.getImageReaders(iis);
+                    ImageReader reader = iterator.next();
+                    reader.setInput(iis, false, true);
+                    int nbPages = reader.getNumImages(true);
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-import java.io.*;
-import java.util.List;
+                    for (int p = 0; p < nbPages; p++) {
+                        BufferedImage bufferedImage = reader.read(p, reader.getDefaultReadParam());
+                        
+                        // Set the PDF page size same as the image
+                        float width = bufferedImage.getWidth();
+                        float height = bufferedImage.getHeight();
+                        PDPage page = new PDPage(new PDRectangle(width, height));
+                        document.addPage(page);
 
-public class ExcelToPDF {
-    public static void main(String[] args) throws Exception {
-        FileInputStream fis = new FileInputStream("input.xlsx");
-        XSSFWorkbook workbook = new XSSFWorkbook(fis);
-        PDDocument pdf = new PDDocument();
-        PDPage page = new PDPage(PDRectangle.A4);
-        pdf.addPage(page);
-        PDPageContentStream contentStream = new PDPageContentStream(pdf, page);
-        contentStream.setFont(PDType1Font.HELVETICA, 10);
-        contentStream.setLeading(14);
-        contentStream.beginText();
-        contentStream.newLineAtOffset(50, 750);
-
-        FormulaEvaluator formulaEvaluator = workbook.getCreationHelper().createFormulaEvaluator();
-
-        for (Sheet sheet : workbook) {
-            for (Row row : sheet) {
-                for (Cell cell : row) {
-                    String value = getCellValue(cell, formulaEvaluator);
-                    contentStream.showText(value + "   ");
+                        PDImageXObject imageXObject = LosslessFactory.createFromImage(document, bufferedImage);
+                        try (PDPageContentStream content = new PDPageContentStream(document, page)) {
+                            content.drawImage(imageXObject, 0, 0, width, height);
+                        }
+                    }
+                } catch (Exception e) {
+                    LOG.error("ERROR CONVERTING TIF image to PDF using PDFBOX - Message=[{}], trying ITEXT ", e.getMessage());
+                    throw new HdpException(new Message(e.getMessage(), CommonErrors.HDP_ERROR.getCode(), MessageType.ERROR));
                 }
-                contentStream.newLine();
-            }
+            });
+            document.save(os);
         }
-
-        contentStream.endText();
-        contentStream.close();
-
-        // Extract and insert images
-        List<XSSFPictureData> pictures = workbook.getAllPictures();
-        for (XSSFPictureData picture : pictures) {
-            byte[] imageBytes = picture.getData();
-            BufferedImage bImage = ImageIO.read(new ByteArrayInputStream(imageBytes));
-            File imageFile = File.createTempFile("excel_image", ".png");
-            ImageIO.write(bImage, "png", imageFile);
-            PDImageXObject pdImage = PDImageXObject.createFromFile(imageFile.getAbsolutePath(), pdf);
-
-            PDPage imgPage = new PDPage();
-            pdf.addPage(imgPage);
-            PDPageContentStream imgStream = new PDPageContentStream(pdf, imgPage);
-            imgStream.drawImage(pdImage, 50, 200, 400, 300);
-            imgStream.close();
-        }
-
-        pdf.save("output.pdf");
-        pdf.close();
-        workbook.close();
-        fis.close();
-
-        System.out.println("✅ Excel to PDF conversion completed with tables, formulas, and images!");
-    }
-
-    private static String getCellValue(Cell cell, FormulaEvaluator formulaEvaluator) {
-        if (cell == null) return "";
-        switch (cell.getCellType()) {
-            case STRING: return cell.getStringCellValue();
-            case NUMERIC: return String.valueOf(cell.getNumericCellValue());
-            case BOOLEAN: return String.valueOf(cell.getBooleanCellValue());
-            case FORMULA:
-                return formulaEvaluator.evaluateInCell(cell).toString();  // Fix for formulas
-            default: return "";
-        }
+        LOG.info("Successfully converted from [AFP] Non Annotated Image file to PDF");
+        return os.toByteArray();
+    } catch (Exception e) {
+        throw new HdpException(new Message(e.getMessage(), CommonErrors.HDP_ERROR.getCode(), MessageType.ERROR));
     }
 }
