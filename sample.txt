@@ -1,22 +1,7 @@
-PDImageXObject pdImage = createPDImageXObjectFromBytes(document, imageBytes);
+  // ✅ Fill the background with white
+        contentStream.setNonStrokingColor(Color.WHITE);
+        contentStream.addRect(0, 0, imgWidth, imgHeight);
+        contentStream.fill();
 
-            float imgWidth = pdImage.getWidth();
-            float imgHeight = pdImage.getHeight();
-
-            // 🔹 FIX: Limit max page size (PDFBox has a max of ~14400x14400 px)
-            float maxSize = 14400;
-            if (imgWidth > maxSize || imgHeight > maxSize) {
-                float scale = Math.min(maxSize / imgWidth, maxSize / imgHeight);
-                imgWidth *= scale;
-                imgHeight *= scale;
-            }
-
-            // 🔹 Ensure PDF page size matches the image size
-            PDRectangle pageSize = new PDRectangle(imgWidth, imgHeight);
-            PDPage page = new PDPage(pageSize);
-            document.addPage(page);
-
-            try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
-                // Draw the image at (0,0) with its final size
-                contentStream.drawImage(pdImage, 0, 0, imgWidth, imgHeight);
-            }
+        // ✅ Draw the actual image on top
+        contentStream.drawImage(pdImage, 0, 0, imgWidth, imgHeight);
