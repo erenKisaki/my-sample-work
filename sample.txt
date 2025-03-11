@@ -1,12 +1,14 @@
-        try (PDDocument document = new PDDocument()) {
-            PDPage page = new PDPage();
+PDImageXObject pdImage = PDImageXObject.createFromByteArray(document, imageBytes, "image");
+
+            float imgWidth = pdImage.getWidth();
+            float imgHeight = pdImage.getHeight();
+
+            // **Fix: Automatically set the page size to match the image size**
+            PDRectangle pageSize = new PDRectangle(imgWidth, imgHeight);
+            PDPage page = new PDPage(pageSize);
             document.addPage(page);
 
-            PDImageXObject pdImage = PDImageXObject.createFromByteArray(document, imageBytes, "image");
-            float scale = 0.5f; // Scale if needed
-            float width = pdImage.getWidth() * scale;
-            float height = pdImage.getHeight() * scale;
-
-            try (var contentStream = new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
-                contentStream.drawImage(pdImage, 50, 50, width, height);
+            try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
+                // **Fix: Ensure the image is properly positioned on the page**
+                contentStream.drawImage(pdImage, 0, 0, imgWidth, imgHeight);
             }
