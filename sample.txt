@@ -1,5 +1,6 @@
-  private static byte[] convertToPNG(File file) throws IOException {
-        BufferedImage originalImage = ImageIO.read(file);
+    private static byte[] convertToPNG(byte[] imageBytes) throws IOException {
+        ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes);
+        BufferedImage originalImage = ImageIO.read(bais);
         if (originalImage == null) {
             throw new IOException("Invalid or unsupported image format.");
         }
