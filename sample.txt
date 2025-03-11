@@ -1,49 +1,12 @@
-import org.apache.pdfbox.pdmodel.*;
-import org.apache.pdfbox.pdmodel.common.PDRectangle;
-import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
-import java.io.*;
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
-
-public class ImageToPDFConverter {
-    public static void main(String[] args) throws IOException {
-        byte[] imageBytes = getImageBytes(); // Replace with actual byte array
-        convertImageToPDF(imageBytes, "output.pdf");
-    }
-
-    public static void convertImageToPDF(byte[] imageBytes, String outputFilePath) throws IOException {
         try (PDDocument document = new PDDocument()) {
-            // Load image
-            ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes);
-            BufferedImage image = ImageIO.read(bais);
-            
-            if (image == null) {
-                throw new IOException("Invalid image format or corrupted image");
-            }
-            
-            float imgWidth = image.getWidth();
-            float imgHeight = image.getHeight();
-            PDRectangle pageSize = new PDRectangle(imgWidth, imgHeight);
-            
-            PDPage page = new PDPage(pageSize);
+            PDPage page = new PDPage();
             document.addPage(page);
-            
+
             PDImageXObject pdImage = PDImageXObject.createFromByteArray(document, imageBytes, "image");
-            
-            try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
-                contentStream.drawImage(pdImage, 0, 0, imgWidth, imgHeight);
+            float scale = 0.5f; // Scale if needed
+            float width = pdImage.getWidth() * scale;
+            float height = pdImage.getHeight() * scale;
+
+            try (var contentStream = new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
+                contentStream.drawImage(pdImage, 50, 50, width, height);
             }
-            
-            document.save(outputFilePath);
-        }
-    }
-    
-    private static byte[] getImageBytes() throws IOException {
-        File file = new File("image.png"); // Replace with actual path
-        try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-            BufferedImage image = ImageIO.read(file);
-            ImageIO.write(image, "png", baos);
-            return baos.toByteArray();
-        }
-    }
-}
