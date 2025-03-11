@@ -1,14 +1,10 @@
-PDImageXObject pdImage = PDImageXObject.createFromByteArray(document, imageBytes, "image");
+  private static byte[] convertToPNG(File file) throws IOException {
+        BufferedImage originalImage = ImageIO.read(file);
+        if (originalImage == null) {
+            throw new IOException("Invalid or unsupported image format.");
+        }
 
-            float imgWidth = pdImage.getWidth();
-            float imgHeight = pdImage.getHeight();
-
-            // **Fix: Automatically set the page size to match the image size**
-            PDRectangle pageSize = new PDRectangle(imgWidth, imgHeight);
-            PDPage page = new PDPage(pageSize);
-            document.addPage(page);
-
-            try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
-                // **Fix: Ensure the image is properly positioned on the page**
-                contentStream.drawImage(pdImage, 0, 0, imgWidth, imgHeight);
-            }
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(originalImage, "png", baos);
+        return baos.toByteArray();
+    }
