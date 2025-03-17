@@ -1,27 +1,12 @@
-    public static byte[] ensureWhiteBackground(byte[] imageBytes) throws IOException {
-        ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes);
+          File dir = new File(filelocation);
+            if (!dir.exists() || !dir.isDirectory()) {
+                System.out.println("Error: Directory does not exist or is not a valid folder: " + filelocation);
+                return;
+            }
 
-        BufferedImage image;
-        try {
-            image = Imaging.getBufferedImage(bais); // ✅ Use Apache Commons Imaging
-        } catch (Exception e) {
-            throw new IOException("Failed to process abnormal image", e);
-        }
-
-        if (image == null) {
-            throw new IOException("Invalid or unsupported image format.");
-        }
-
-        // Create a new image with a white background
-        BufferedImage newImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = newImage.createGraphics();
-        g.setColor(Color.WHITE); // ✅ Set background to white
-        g.fillRect(0, 0, image.getWidth(), image.getHeight());
-        g.drawImage(image, 0, 0, null);
-        g.dispose();
-
-        // Convert back to byte array
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        Imaging.writeImage(newImage, baos, ImageFormats.PNG, null); // ✅ Use Imaging.writeImage
-        return baos.toByteArray();
-    }
+            // Ensure listFiles() is not null
+            File[] files = dir.listFiles();
+            if (files == null || files.length == 0) {
+                System.out.println("No files found in the directory: " + filelocation);
+                return;
+            }
