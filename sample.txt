@@ -1,12 +1,59 @@
-          File dir = new File(filelocation);
-            if (!dir.exists() || !dir.isDirectory()) {
-                System.out.println("Error: Directory does not exist or is not a valid folder: " + filelocation);
-                return;
-            }
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.Iterator;
+import javax.imageio.IIOException;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory;
 
-            // Ensure listFiles() is not null
-            File[] files = dir.listFiles();
-            if (files == null || files.length == 0) {
-                System.out.println("No files found in the directory: " + filelocation);
-                return;
+public class TIFFToPDFConverter {
+    public static byte[] convertTiffToPdf(final byte[] inputBytes) {
+        try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+            try (ImageInputStream is = ImageIO.createImageInputStream(new ByteArrayInputStream(inputBytes))) {
+                Iterator<ImageReader> readers = ImageIO.getImageReaders(is);
+                
+                if (!readers.hasNext()) {
+                    throw new IOException("No TIFF reader found");
+                }
+
+                ImageReader reader = readers.next();
+                reader.setInput(is, false, true); // Disable metadata processing to avoid IIOException
+
+                int numPages = reader.getNumImages(true);
+                if (numPages == 0) {
+                    throw new IOException("No images found in TIFF");
+                }
+
+                try (PDDocument document = new PDDocument()) {
+                    for (int i = 0; i < numPages; i++) {
+                        try {
+                            BufferedImage bufferedImage = reader.read(i);
+                            PDPage page = new PDPage();
+                            document.addPage(page);
+
+                            PDPageContentStream contentStream = new PDPageContentStream(document, page);
+                            contentStream.drawImage(
+                                LosslessFactory.createFromImage(document, bufferedImage),
+                                0, 0, page.getMediaBox().getWidth(), page.getMediaBox().getHeight()
+                            );
+                            contentStream.close();
+                        } catch (IIOException e) {
+                            System.err.println("Skipping invalid TIFF page " + i + ": " + e.getMessage());
+                            continue;
+                        }
+                    }
+                    document.save(os);
+                }
             }
+            return os.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Error converting TIFF to PDF: " + e.getMessage(), e);
+        }
+    }
+}
