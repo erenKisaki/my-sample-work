@@ -1,59 +1,97 @@
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.Iterator;
-import javax.imageio.IIOException;
-import javax.imageio.ImageIO;
-import javax.imageio.ImageReader;
-import javax.imageio.stream.ImageInputStream;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory;
+Feature: Allocate Token Functionality in CMO Application
 
-public class TIFFToPDFConverter {
-    public static byte[] convertTiffToPdf(final byte[] inputBytes) {
-        try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
-            try (ImageInputStream is = ImageIO.createImageInputStream(new ByteArrayInputStream(inputBytes))) {
-                Iterator<ImageReader> readers = ImageIO.getImageReaders(is);
-                
-                if (!readers.hasNext()) {
-                    throw new IOException("No TIFF reader found");
-                }
+  Scenario: Login to CMO application
+    Given the user is on the CMO login page
+    When the user enters valid username and password
+    And clicks on the login button
+    Then the user should be redirected to the home page
 
-                ImageReader reader = readers.next();
-                reader.setInput(is, false, true); // Disable metadata processing to avoid IIOException
+  Scenario: Navigate to Allocate Token Page
+    Given the user is logged into the CMO application
+    When the user clicks on the "Support" tab
+    And selects "Manage Token"
+    Then the "Allocate Token" page should be displayed
 
-                int numPages = reader.getNumImages(true);
-                if (numPages == 0) {
-                    throw new IOException("No images found in TIFF");
-                }
+  Scenario: Allocate Token with valid inputs
+    Given the user is on the "Allocate Token" page
+    When the user selects "WIRE PAYMENT" as the Community Name
+    And selects any application from the dropdown
+    And enters a valid User ID
+    And enters a valid Token
+    And clicks on "Allocate Tokens" button
+    Then the token should be allocated successfully
+    And a success message should be displayed
 
-                try (PDDocument document = new PDDocument()) {
-                    for (int i = 0; i < numPages; i++) {
-                        try {
-                            BufferedImage bufferedImage = reader.read(i);
-                            PDPage page = new PDPage();
-                            document.addPage(page);
+  Scenario: Allocate Token with empty fields
+    Given the user is on the "Allocate Token" page
+    When the user clicks on "Allocate Tokens" button without entering any data
+    Then an error message "User ID and Token are required" should be displayed
 
-                            PDPageContentStream contentStream = new PDPageContentStream(document, page);
-                            contentStream.drawImage(
-                                LosslessFactory.createFromImage(document, bufferedImage),
-                                0, 0, page.getMediaBox().getWidth(), page.getMediaBox().getHeight()
-                            );
-                            contentStream.close();
-                        } catch (IIOException e) {
-                            System.err.println("Skipping invalid TIFF page " + i + ": " + e.getMessage());
-                            continue;
-                        }
-                    }
-                    document.save(os);
-                }
-            }
-            return os.toByteArray();
-        } catch (Exception e) {
-            throw new RuntimeException("Error converting TIFF to PDF: " + e.getMessage(), e);
-        }
-    }
-}
+  Scenario: Allocate Token with empty User ID
+    Given the user is on the "Allocate Token" page
+    When the user selects "WIRE PAYMENT" as the Community Name
+    And selects any application from the dropdown
+    And leaves the User ID field empty
+    And enters a valid Token
+    And clicks on "Allocate Tokens" button
+    Then an error message "User ID is required" should be displayed
+
+  Scenario: Allocate Token with empty Token field
+    Given the user is on the "Allocate Token" page
+    When the user selects "WIRE PAYMENT" as the Community Name
+    And selects any application from the dropdown
+    And enters a valid User ID
+    And leaves the Token field empty
+    And clicks on "Allocate Tokens" button
+    Then an error message "Token is required" should be displayed
+
+  Scenario: Allocate Token with invalid User ID
+    Given the user is on the "Allocate Token" page
+    When the user selects "WIRE PAYMENT" as the Community Name
+    And selects any application from the dropdown
+    And enters an invalid User ID
+    And enters a valid Token
+    And clicks on "Allocate Tokens" button
+    Then an error message "Invalid User ID" should be displayed
+
+  Scenario: Allocate Token with invalid Token
+    Given the user is on the "Allocate Token" page
+    When the user selects "WIRE PAYMENT" as the Community Name
+    And selects any application from the dropdown
+    And enters a valid User ID
+    And enters an invalid Token
+    And clicks on "Allocate Tokens" button
+    Then an error message "Invalid Token" should be displayed
+
+  Scenario: Reset the form
+    Given the user is on the "Allocate Token" page
+    When the user enters valid data in all fields
+    And clicks on the "Reset" button
+    Then all fields should be cleared
+
+  Scenario: Allocate Token with unauthorized access
+    Given the user is logged into the CMO application with restricted access
+    When the user attempts to navigate to "Allocate Token" page
+    Then an access denied message should be displayed
+
+  Scenario Outline: Validate application dropdown selections
+    Given the user is on the "Allocate Token" page
+    When the user selects "WIRE PAYMENT" as the Community Name
+    And selects "<Application>" from the Application dropdown
+    Then the system should accept the selection without errors
+
+    Examples:
+      | Application              |
+      | All Applications         |
+      | SAA                      |
+      | BESS                     |
+      | CITRIX_ADMIN             |
+      | DB_ADMIN                 |
+      | NETSCALAR_ADMIN          |
+      | SAA_ADMIN                |
+      | VARMOUR_ADMIN            |
+      | VMWARE_ADMIN             |
+      | BESS_TANDEM_ADMIN        |
+      | OTHERS                   |
+      | GTX                      |
+      | ???global.label.application.BOT??? |
