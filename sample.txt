@@ -1,16 +1,12 @@
-        // Click on "Advanced" button
-        WebElement advancedButton = driver.findElement(By.xpath("//button[contains(text(),'Advanced')]"));
-        advancedButton.click();
-        
-        // Click on "Proceed to [URL] (unsafe)"
-        WebElement proceedLink = driver.findElement(By.xpath("//a[contains(text(),'Proceed to')]"));
-        proceedLink.click();
-        
-        // If a certificate selection appears, choose the first one
-        try {
-            WebElement certificateOption = driver.findElement(By.xpath("(//td[@class='subject'])[1]"));
-            certificateOption.click();
-            certificateOption.sendKeys(Keys.ENTER);
-        } catch (Exception e) {
-            System.out.println("No certificate selection required.");
-        }
+        // Set Chrome Preferences to Auto-Select the First Certificate
+        Map<String, Object> prefs = new HashMap<>();
+        prefs.put("profile.default_content_setting_values.automatic_downloads", 1);
+        prefs.put("profile.default_content_setting_values.notifications", 1);
+        prefs.put("profile.default_content_setting_values.popups", 1);
+        prefs.put("profile.default_content_setting_values.mixed_script", 1);
+        prefs.put("profile.default_content_setting_values.insecure_content", 1);
+
+        ChromeOptions options = new ChromeOptions();
+        options.setExperimentalOption("prefs", prefs);
+        options.addArguments("--ignore-certificate-errors");
+        options.addArguments("--disable-infobars");
