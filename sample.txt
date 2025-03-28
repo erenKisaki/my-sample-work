@@ -1,12 +1,86 @@
-        // Set Chrome Preferences to Auto-Select the First Certificate
-        Map<String, Object> prefs = new HashMap<>();
-        prefs.put("profile.default_content_setting_values.automatic_downloads", 1);
-        prefs.put("profile.default_content_setting_values.notifications", 1);
-        prefs.put("profile.default_content_setting_values.popups", 1);
-        prefs.put("profile.default_content_setting_values.mixed_script", 1);
-        prefs.put("profile.default_content_setting_values.insecure_content", 1);
+import io.cucumber.java.en.*;
+import org.openqa.selenium.*;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.support.ui.Select;
+import java.time.Duration;
+import static org.junit.Assert.*;
 
-        ChromeOptions options = new ChromeOptions();
-        options.setExperimentalOption("prefs", prefs);
-        options.addArguments("--ignore-certificate-errors");
-        options.addArguments("--disable-infobars");
+public class AllocateTokenSteps {
+    WebDriver driver;
+
+    @Given("User is on the Support tab")
+    public void user_is_on_the_support_tab() {
+        driver = new ChromeDriver();
+        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
+        driver.manage().window().maximize();
+        driver.get("URL_OF_SUPPORT_PAGE"); // Replace with actual URL
+    }
+
+    @When("User clicks on {string} button")
+    public void user_clicks_on_button(String buttonName) {
+        WebElement button = driver.findElement(By.xpath("//button[text()='" + buttonName + "']"));
+        button.click();
+    }
+
+    @Then("Allocate Token page should be displayed")
+    public void allocate_token_page_should_be_displayed() {
+        WebElement pageHeader = driver.findElement(By.xpath("//h1[contains(text(),'Allocate Token')]"));
+        assertTrue("Allocate Token page not displayed", pageHeader.isDisplayed());
+    }
+
+    @Given("User is on the Allocate Token page")
+    public void user_is_on_the_allocate_token_page() {
+        driver.get("URL_OF_ALLOCATE_TOKEN_PAGE"); // Replace with actual URL
+    }
+
+    @When("User selects {string} from the dropdown")
+    public void user_selects_from_the_dropdown(String application) {
+        WebElement dropdown = driver.findElement(By.xpath("//select[@name='application']"));
+        Select select = new Select(dropdown);
+        select.selectByVisibleText(application);
+    }
+
+    @Then("The selected application should be {string}")
+    public void the_selected_application_should_be(String application) {
+        WebElement dropdown = driver.findElement(By.xpath("//select[@name='application']"));
+        Select select = new Select(dropdown);
+        assertEquals("Dropdown selection failed", application, select.getFirstSelectedOption().getText());
+    }
+
+    @When("User clicks on {string} without entering User ID and Token")
+    public void user_clicks_on_without_entering_user_id_and_token(String buttonName) {
+        WebElement button = driver.findElement(By.xpath("//button[text()='" + buttonName + "']"));
+        button.click();
+    }
+
+    @Then("An error message should be displayed for missing fields")
+    public void an_error_message_should_be_displayed_for_missing_fields() {
+        WebElement userIdError = driver.findElement(By.xpath("//span[contains(text(),'User ID is required')]"));
+        WebElement tokenError = driver.findElement(By.xpath("//span[contains(text(),'Token is required')]"));
+        assertTrue("User ID error not displayed", userIdError.isDisplayed());
+        assertTrue("Token error not displayed", tokenError.isDisplayed());
+    }
+
+    @Given("User has entered User ID and Token")
+    public void user_has_entered_user_id_and_token() {
+        WebElement userIdField = driver.findElement(By.xpath("//input[@name='userId']"));
+        WebElement tokenField = driver.findElement(By.xpath("//input[@name='token']"));
+        userIdField.sendKeys("TestUser");
+        tokenField.sendKeys("TestToken");
+    }
+
+    @When("User clicks on {string} button")
+    public void user_clicks_on_reset_button(String buttonName) {
+        WebElement resetButton = driver.findElement(By.xpath("//button[text()='" + buttonName + "']"));
+        resetButton.click();
+    }
+
+    @Then("The User ID and Token fields should be cleared")
+    public void the_user_id_and_token_fields_should_be_cleared() {
+        WebElement userIdField = driver.findElement(By.xpath("//input[@name='userId']"));
+        WebElement tokenField = driver.findElement(By.xpath("//input[@name='token']"));
+        assertTrue("User ID field not cleared", userIdField.getAttribute("value").isEmpty());
+        assertTrue("Token field not cleared", tokenField.getAttribute("value").isEmpty());
+        driver.quit();
+    }
+}
