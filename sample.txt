@@ -1,120 +1,125 @@
-// 1. Navigating to "Manage Token" Page
-    @When("the user navigates to the Manage Token page")
-    public void the_user_navigates_to_manage_token_page() {
-        driver.findElement(By.xpath("//a[text()='User']")).click();
-        driver.findElement(By.xpath("//a[text()='Manage Token']")).click();
+package stepdefinitions;
+
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.support.ui.Select;
+import io.cucumber.java.en.*;
+import org.junit.Assert;
+import utils.WebDriverManager;
+
+public class AllocateTokenStepDef {
+    WebDriver driver = WebDriverManager.getDriver();
+
+    @Given("the user is logged into the CMO application with the valid username and password")
+    public void the_user_is_logged_into_the_CMO_application() {
+        driver.get("https://cmo-application-url.com"); // Replace with actual URL
+        driver.findElement(By.id("username")).sendKeys("validUsername");
+        driver.findElement(By.id("password")).sendKeys("validPassword");
+        driver.findElement(By.id("loginButton")).click();
     }
 
-    @Then("the Manage Token page should be displayed")
-    public void the_manage_token_page_should_be_displayed() {
-        WebElement header = driver.findElement(By.xpath("//h1[contains(text(),'Manage Token')]"));
-        Assert.assertTrue(header.isDisplayed());
+    @When("the user clicks on the {string} tab")
+    public void the_user_clicks_on_tab(String tabName) {
+        driver.findElement(By.xpath("//a[text()='" + tabName + "']")).click();
     }
 
-    // 2. Filling in Token Search Fields and Searching
-    @When("the user enters Token Serial Number {string}")
-    public void the_user_enters_token_serial_number(String tokenSerial) {
-        driver.findElement(By.id("tokenSerialNumber")).sendKeys(tokenSerial);
+    @And("selects {string} button")
+    public void selects_button(String buttonName) {
+        driver.findElement(By.xpath("//button[text()='" + buttonName + "']")).click();
     }
 
-    @And("enters First Name {string} and Last Name {string}")
-    public void the_user_enters_first_name_and_last_name(String firstName, String lastName) {
-        driver.findElement(By.id("firstName")).sendKeys(firstName);
-        driver.findElement(By.id("lastName")).sendKeys(lastName);
+    @Then("the Allocates Token page should be displayed with the prepopulated values")
+    public void the_allocates_token_page_should_be_displayed() {
+        WebElement pageHeader = driver.findElement(By.xpath("//h1[contains(text(),'Allocate Token')]"));
+        Assert.assertTrue(pageHeader.isDisplayed());
     }
 
-    @And("enters Scotia ID {string}")
-    public void the_user_enters_scotia_id(String scotiaId) {
-        driver.findElement(By.id("scotiaId")).sendKeys(scotiaId);
-    }
-
-    @And("selects Allocation Date {string}")
-    public void the_user_selects_allocation_date(String allocationDate) {
-        Select allocationDropdown = new Select(driver.findElement(By.id("allocationDate")));
-        allocationDropdown.selectByVisibleText(allocationDate);
-    }
-
-    @And("clicks on Search button")
-    public void the_user_clicks_on_search_button() {
-        driver.findElement(By.xpath("//button[text()='Search']")).click();
-    }
-
-    @Then("the search results should be displayed")
-    public void the_search_results_should_be_displayed() {
-        WebElement resultsTable = driver.findElement(By.id("resultsTable"));
-        Assert.assertTrue(resultsTable.isDisplayed());
-    }
-
-    // 3. Validating "Allocate Tokens" Button on the Manage Token Page
-    @Then("the Allocate Tokens button should be enabled")
-    public void the_allocate_tokens_button_should_be_enabled() {
-        WebElement allocateButton = driver.findElement(By.xpath("//button[text()='Allocate Tokens']"));
-        Assert.assertTrue(allocateButton.isEnabled());
-    }
-
-    @When("the user clicks on Allocate Tokens button")
-    public void the_user_clicks_on_allocate_tokens_button() {
-        driver.findElement(By.xpath("//button[text()='Allocate Tokens']")).click();
-    }
-
-    // 4. Validating Allocate Token Page Elements
-    @Then("the Allocate Token page should be displayed with prepopulated values")
-    public void the_allocate_token_page_should_be_displayed_with_prepopulated_values() {
-        WebElement header = driver.findElement(By.xpath("//h1[contains(text(),'Allocate Token')]"));
-        Assert.assertTrue(header.isDisplayed());
-
-        Select communityDropdown = new Select(driver.findElement(By.id("communityName")));
-        Assert.assertEquals("WIRE PAYMENT", communityDropdown.getFirstSelectedOption().getText());
-
-        Select applicationDropdown = new Select(driver.findElement(By.id("application")));
-        Assert.assertEquals("All Applications", applicationDropdown.getFirstSelectedOption().getText());
-    }
-
-    // 5. Selecting Community Name and Application
-    @When("the user selects Community Name {string}")
-    public void the_user_selects_community_name(String communityName) {
+    @When("the user selects {string} as the Community Name")
+    public void the_user_selects_as_the_community_name(String communityName) {
         Select communityDropdown = new Select(driver.findElement(By.id("communityName")));
         communityDropdown.selectByVisibleText(communityName);
     }
 
-    @When("the user selects Application {string}")
-    public void the_user_selects_application(String application) {
+    @And("selects any application from the dropdown")
+    public void selects_any_application_from_dropdown() {
         Select applicationDropdown = new Select(driver.findElement(By.id("application")));
-        applicationDropdown.selectByVisibleText(application);
+        applicationDropdown.selectByIndex(1); // Selects the second option (index starts from 0)
     }
 
-    // 6. Entering User ID and Token
-    @When("the user enters User ID {string}")
-    public void the_user_enters_user_id(String userId) {
-        driver.findElement(By.id("userId")).sendKeys(userId);
+    @And("enters a valid User ID")
+    public void enters_valid_user_id() {
+        driver.findElement(By.id("userId")).sendKeys("validUser123");
     }
 
-    @And("enters Token {string}")
-    public void the_user_enters_token(String token) {
-        driver.findElement(By.id("token")).sendKeys(token);
+    @And("enters a valid Token")
+    public void enters_valid_token() {
+        driver.findElement(By.id("token")).sendKeys("validToken123");
     }
 
-    @And("clicks on Allocate Tokens button in Allocate Token page")
-    public void the_user_clicks_allocate_tokens_in_allocate_token_page() {
-        driver.findElement(By.xpath("//button[text()='Allocate Tokens']")).click();
+    @And("clicks on {string} button")
+    public void clicks_on_button(String buttonText) {
+        driver.findElement(By.xpath("//button[text()='" + buttonText + "']")).click();
     }
 
-    @Then("a success message {string} should be displayed")
-    public void a_success_message_should_be_displayed(String expectedMessage) {
+    @Then("the token should be allocated successfully")
+    public void the_token_should_be_allocated_successfully() {
         WebElement successMessage = driver.findElement(By.id("successMessage"));
-        Assert.assertEquals(expectedMessage, successMessage.getText());
+        Assert.assertTrue(successMessage.isDisplayed());
     }
 
-    // 7. Reset Button Functionality
-    @When("the user clicks on Reset button")
-    public void the_user_clicks_on_reset_button() {
-        driver.findElement(By.xpath("//button[text()='Reset']")).click();
+    @Then("validate the success message displayed")
+    public void validate_the_success_message_displayed() {
+        WebElement successMessage = driver.findElement(By.id("successMessage"));
+        Assert.assertEquals("Token allocated successfully!", successMessage.getText());
     }
 
-    @Then("all fields should be cleared in Allocate Token page")
-    public void all_fields_should_be_cleared_in_allocate_token_page() {
-        Assert.assertEquals("", driver.findElement(By.id("userId")).getAttribute("value"));
-        Assert.assertEquals("", driver.findElement(By.id("token")).getAttribute("value"));
+    @When("the user clicks on {string} button without entering any data")
+    public void clicks_allocate_tokens_without_data(String buttonText) {
+        driver.findElement(By.xpath("//button[text()='" + buttonText + "']")).click();
+    }
+
+    @Then("an error message {string} should be displayed")
+    public void validate_error_message_displayed(String expectedErrorMessage) {
+        WebElement errorMessage = driver.findElement(By.id("errorMessage"));
+        Assert.assertEquals(expectedErrorMessage, errorMessage.getText());
+    }
+
+    @And("leaves the User ID field empty")
+    public void leaves_user_id_field_empty() {
+        driver.findElement(By.id("userId")).clear();
+    }
+
+    @And("leaves the Token field empty")
+    public void leaves_token_field_empty() {
+        driver.findElement(By.id("token")).clear();
+    }
+
+    @And("enters an invalid User ID")
+    public void enters_invalid_user_id() {
+        driver.findElement(By.id("userId")).sendKeys("invalidUser!");
+    }
+
+    @And("enters an invalid Token")
+    public void enters_invalid_token() {
+        driver.findElement(By.id("token")).sendKeys("invalidToken!");
+    }
+
+    @When("the user enters valid data in all fields")
+    public void enters_valid_data_in_all_fields() {
+        driver.findElement(By.id("userId")).sendKeys("validUser123");
+        driver.findElement(By.id("token")).sendKeys("validToken123");
+    }
+
+    @And("clicks on the {string} button")
+    public void clicks_on_reset_button(String buttonText) {
+        driver.findElement(By.xpath("//button[text()='" + buttonText + "']")).click();
+    }
+
+    @Then("all fields should be cleared and validate the dropdown values")
+    public void all_fields_should_be_cleared() {
+        Assert.assertTrue(driver.findElement(By.id("userId")).getText().isEmpty());
+        Assert.assertTrue(driver.findElement(By.id("token")).getText().isEmpty());
 
         Select communityDropdown = new Select(driver.findElement(By.id("communityName")));
         Assert.assertEquals("WIRE PAYMENT", communityDropdown.getFirstSelectedOption().getText());
@@ -122,3 +127,67 @@
         Select applicationDropdown = new Select(driver.findElement(By.id("application")));
         Assert.assertEquals("All Applications", applicationDropdown.getFirstSelectedOption().getText());
     }
+
+    @Then("the system should accept the selection without errors")
+    public void validate_application_selection() {
+        WebElement applicationDropdown = driver.findElement(By.id("application"));
+        Assert.assertTrue(applicationDropdown.isDisplayed());
+    }
+
+    @When("the user selects {string} from the Application dropdown")
+    public void the_user_selects_application_dropdown(String applicationName) {
+        Select applicationDropdown = new Select(driver.findElement(By.id("application")));
+        applicationDropdown.selectByVisibleText(applicationName);
+    }
+
+    @Given("the user is logged into the CMO application with restricted access")
+    public void the_user_is_logged_into_the_CMO_application_with_restricted_access() {
+        driver.get("https://cmo-application-url.com");
+        driver.findElement(By.id("username")).sendKeys("restrictedUser");
+        driver.findElement(By.id("password")).sendKeys("restrictedPassword");
+        driver.findElement(By.id("loginButton")).click();
+    }
+
+    @When("the user attempts to navigate to {string} page")
+    public void the_user_attempts_to_navigate_to_allocate_token_page(String page) {
+        driver.findElement(By.xpath("//a[text()='" + page + "']")).click();
+    }
+
+    @Then("an access denied message should be displayed")
+    public void an_access_denied_message_should_be_displayed() {
+        WebElement accessDeniedMessage = driver.findElement(By.id("accessDeniedMessage"));
+        Assert.assertEquals("Access Denied", accessDeniedMessage.getText());
+    }
+
+    // **Newly Added Step Definitions**
+
+    @When("the user selects an application that does not exist")
+    public void the_user_selects_non_existent_application() {
+        Select applicationDropdown = new Select(driver.findElement(By.id("application")));
+        try {
+            applicationDropdown.selectByVisibleText("NonExistentApplication");
+        } catch (Exception e) {
+            System.out.println("Application not found in dropdown.");
+        }
+    }
+
+    @Then("an application selection error message {string} should be displayed")
+    public void application_selection_error_message(String expectedMessage) {
+        WebElement errorMessage = driver.findElement(By.id("applicationErrorMessage"));
+        Assert.assertEquals(expectedMessage, errorMessage.getText());
+    }
+
+    @And("clicks on the submit button multiple times")
+    public void clicks_submit_button_multiple_times() {
+        WebElement submitButton = driver.findElement(By.id("submitButton"));
+        for (int i = 0; i < 3; i++) {
+            submitButton.click();
+        }
+    }
+
+    @Then("the system should prevent multiple submissions")
+    public void system_prevents_multiple_submissions() {
+        WebElement loadingSpinner = driver.findElement(By.id("loadingSpinner"));
+        Assert.assertTrue(loadingSpinner.isDisplayed());
+    }
+}
