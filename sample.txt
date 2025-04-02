@@ -1,119 +1,57 @@
-package stepdefinitions;
+ public static Map<String, String> getStdIDFromADService(Set<String> userRecords, int partitionSize,  String subjectType) {
+        Map<String, String> resultMap = new HashMap<String, String>();
+        LDAPConnection con = null;
+        SocketFactory socketFactory = null;
+        String subjectFormat = null;
 
-import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.ui.Select;
-import io.cucumber.java.en.*;
-import org.junit.Assert;
-import utils.WebDriverManager;
+        String ldapHost = Config.getConfigValue("AD_HOST");
+        int ldapPort = Integer.valueOf(Config.getConfigValue("AD_PORT"));
+        String bindDn = Config.getConfigValue("AD_BINDDN");
+        String bindPw = Config.getConfigValue("AD_PWD");
+        String userIdAttr = "sAMAccountName";
 
-public class AllocateTokenStepDef {
-    WebDriver driver = WebDriverManager.getDriver();
+        
+        List<List<String>> partitions = getPartitionedList(userRecords, partitionSize);
 
-    @Given("the user is logged into the CMO application with the valid username and password")
-    public void login_to_CMO_application() {
-        driver.get("https://cmo-application-url.com");
-        driver.findElement(By.id("username")).sendKeys("validUsername");
-        driver.findElement(By.id("password")).sendKeys("validPassword");
-        driver.findElement(By.id("loginButton")).click();
-    }
-
-    @When("the user clicks on the {string} tab")
-    public void click_on_tab(String tabName) {
-        driver.findElement(By.xpath("//a[text()='" + tabName + "']")).click();
-    }
-
-    @And("clicks on the {string} button")
-    public void click_on_button(String buttonName) {
-        driver.findElement(By.xpath("//button[text()='" + buttonName + "']")).click();
-    }
-
-    @Then("the Allocate Token page should be displayed")
-    public void validate_allocate_token_page() {
-        WebElement pageHeader = driver.findElement(By.xpath("//h1[contains(text(),'Allocate Token')]"));
-        Assert.assertTrue("Allocate Token page is not displayed!", pageHeader.isDisplayed());
-    }
-
-    @When("the user selects {string} from the {string} dropdown")
-    public void select_from_dropdown(String option, String dropdownName) {
-        String dropdownId = dropdownName.equalsIgnoreCase("Community Name") ? "communityName" : "application";
-        Select dropdown = new Select(driver.findElement(By.id(dropdownId)));
-
-        boolean optionExists = dropdown.getOptions().stream().anyMatch(o -> o.getText().equals(option));
-        if (optionExists) {
-            dropdown.selectByVisibleText(option);
-        } else {
-            System.out.println("Option not found in dropdown: " + option);
+        if(subjectType.equalsIgnoreCase("email")) {
+            subjectFormat = "mail";
+            userIdAttr = "sAMAccountName"; // need to change
+        } else if(subjectType.equalsIgnoreCase("pno")) {
+            subjectFormat = "sAMAccountName";
+            userIdAttr = "sAMAccountName";
+        } else{
+            subjectFormat = "sAMAccountName";
+            userIdAttr = "sAMAccountName";
         }
-    }
+        
+        SearchResult results = null;
+        
+        try {
+            socketFactory = SSLSocketFactory.getDefault();
+            System.setProperty("jdk.tls.client.protocols", "TLSv1.2");
+            con = new LDAPConnection(socketFactory, ldapHost, ldapPort, bindDn, bindPw);
+            logger.info("Connected to AD server for converting " + userRecords.size() + " " + subjectFormat + " to Standard IDs");
+            
+            String baseDn = Config.getConfigValue("AD_BASEDN");
+            String standardId = "", inputId = "";
+            String returnAttrs[] = { userIdAttr };
+            List<Filter> filters = new ArrayList<Filter>();
+            SearchRequest searchRequest = null;
+            Filter filter = null;
+            Filter acctypeFilter = null;
 
-    @And("enters User ID {string} and Token {string}")
-    public void enter_user_details(String userId, String token) {
-        driver.findElement(By.id("userId")).sendKeys(userId);
-        driver.findElement(By.id("token")).sendKeys(token);
-    }
-
-    @Then("the system should accept the selection without errors")
-    public void validate_application_selection() {
-        WebElement applicationDropdown = driver.findElement(By.id("application"));
-        Assert.assertTrue("Application dropdown is not displayed!", applicationDropdown.isDisplayed());
-    }
-
-    @When("the user selects an invalid application")
-    public void select_invalid_application() {
-        Select applicationDropdown = new Select(driver.findElement(By.id("application")));
-        boolean found = applicationDropdown.getOptions().stream()
-            .anyMatch(option -> option.getText().equals("All Applications"));
-        if (found) {
-            applicationDropdown.selectByVisibleText("All Applications");
-        } else {
-            System.out.println("Option not found in dropdown.");
-        }
-    }
-
-    @Then("an error message should be displayed indicating selection is required")
-    public void validate_application_selection_error() {
-        WebElement errorMessage = driver.findElement(By.xpath("//div[contains(@class,'error') and contains(text(),'Please select an application first')]"));
-        Assert.assertTrue("Application selection error message not displayed!", errorMessage.isDisplayed());
-    }
-
-    @When("the user clicks Allocate Token without entering required fields")
-    public void click_allocate_without_data() {
-        driver.findElement(By.id("submitButton")).click();
-    }
-
-    @Then("an error message should be displayed indicating missing fields")
-    public void validate_missing_fields_error() {
-        WebElement errorMessage = driver.findElement(By.xpath("//div[contains(@class,'error')]"));
-        String expectedErrorMessage = "Please select an application first for allocating a token to a customer\nPlease enter a User ID\nPlease scan a token to allocate";
-        Assert.assertEquals("Error message mismatch!", expectedErrorMessage.trim(), errorMessage.getText().trim());
-    }
-
-    @And("clicks on the submit button multiple times")
-    public void click_submit_multiple_times() {
-        WebElement submitButton = driver.findElement(By.id("submitButton"));
-        for (int i = 0; i < 3; i++) {
-            submitButton.click();
-        }
-    }
-
-    @Then("the system should prevent multiple submissions")
-    public void validate_no_multiple_submissions() {
-        WebElement submitButton = driver.findElement(By.id("submitButton"));
-        Assert.assertFalse("Submit button should be disabled after first click!", submitButton.isEnabled());
-    }
-
-    @Then("all fields should be cleared and validate dropdown values")
-    public void validate_reset_functionality() {
-        Assert.assertTrue("User ID field is not cleared!", driver.findElement(By.id("userId")).getAttribute("value").isEmpty());
-        Assert.assertTrue("Token field is not cleared!", driver.findElement(By.id("token")).getAttribute("value").isEmpty());
-
-        Select communityDropdown = new Select(driver.findElement(By.id("communityName")));
-        String defaultCommunity = communityDropdown.getFirstSelectedOption().getText();
-        Assert.assertEquals("Community Name reset failed!", defaultCommunity, communityDropdown.getFirstSelectedOption().getText());
-
-        Select applicationDropdown = new Select(driver.findElement(By.id("application")));
-        Assert.assertEquals("Application reset failed!", "All Applications", applicationDropdown.getFirstSelectedOption().getText());
-    }
-}
+            for (List<String> subjectSubLst : partitions) {
+                for (String subject : subjectSubLst) {
+                    filters.add(Filter.createEqualityFilter(subjectFormat, subject));
+                }
+                filter = Filter.createORFilter(filters);
+                
+                filters = new ArrayList<Filter>();
+                filters.add(Filter.createEqualityFilter(BOFA_ACC_TYPE, "Elevated"));
+                filters.add(Filter.createEqualityFilter(BOFA_ACC_TYPE, "Primary"));
+                acctypeFilter =  Filter.createORFilter(filters);
+                
+                filters = new ArrayList<Filter>();
+                filters.add(filter);
+                filters.add(acctypeFilter);
+                filter = Filter.createANDFilter(filters);
