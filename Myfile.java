@@ -1,20 +1,59 @@
-
-    private static void drawWrappedText(PDPageContentStream contentStream, String text, float maxWidth) throws IOException {
-        String[] words = text.split(" ");
-        StringBuilder line = new StringBuilder();
-        float spaceWidth = 3;
-        float textWidth = 0;
-
-        for (String word : words) {
-            float wordWidth = PDType1Font.HELVETICA.getStringWidth(word) / 1000 * 10;
-            if (textWidth + wordWidth > maxWidth) {
-                contentStream.showText(line.toString());
-                contentStream.newLineAtOffset(0, -12);
-                line = new StringBuilder();
-                textWidth = 0;
-            }
-            line.append(word).append(" ");
-            textWidth += wordWidth + spaceWidth;
+    // uid & stdid processing
+    if(!adRecords.isEmpty()) {
+    logger.info("**********AD Service Records Processing**********");
+    
+    Map<String, String> uidMap = ADConnect.getStdIdFromADServices(adRecordsSubject, 5, "stdid");
+    
+    for(SSOSplunkEvent eventRec : adRecords) {
+        String stdId = uidMap.get(eventRec.getSubject().toUpperCase());
+        
+        if(isNullOrEmpty(stdId)) {
+            eventRec.setStdId(stdId);
+            ssoEventData.add(eventRec);
+        } else {
+            excludedCount++;
+            adExcludedRecords.add(eventRec.getSubject().toUpperCase());
+            logger.debug("UtilInfo: Std Id not found in CDSN : " + eventRec.toString(Boolean.TRUE));
         }
-        contentStream.showText(line.toString().trim());
+    }
+    }
+
+       // pno processing
+       if(!adPnoRecords.isEmpty()) {
+        logger.info("**********AD Service Records Processing**********");
+        
+        Map<String, String> uidMap = ADConnect.getStdIdFromADServices(adPnoRecordsSubject, 5, "pno");
+        
+        for(SSOSplunkEvent eventRec : adPnoRecords) {
+            String stdId = uidMap.get(eventRec.getSubject().toUpperCase());
+            
+            if(isNullOrEmpty(stdId)) {
+                eventRec.setStdId(stdId);
+                ssoEventData.add(eventRec);
+            } else {
+                excludedCount++;
+                adExcludedRecords.add(eventRec.getSubject().toUpperCase());
+                logger.debug("UtilInfo: Std Id not found in CDSN : " + eventRec.toString(Boolean.TRUE));
+            }
+        }
+    }
+
+       // email processing
+       if(!adEmailRecords.isEmpty()) {
+        logger.info("**********AD Service Records Processing**********");
+        
+        Map<String, String> uidMap = ADConnect.getStdIdFromADServices(adEmailRecordsSubject, 5, "email");
+        
+        for(SSOSplunkEvent eventRec : adEmailRecords) {
+            String stdId = uidMap.get(eventRec.getSubject().toUpperCase());
+            
+            if(isNullOrEmpty(stdId)) {
+                eventRec.setStdId(stdId);
+                ssoEventData.add(eventRec);
+            } else {
+                excludedCount++;
+                adExcludedRecords.add(eventRec.getSubject().toUpperCase());
+                logger.debug("UtilInfo: Std Id not found in CDSN : " + eventRec.toString(Boolean.TRUE));
+            }
+        }
     }
