@@ -17,13 +17,12 @@
             subjectFormat = "mail";
             userIdAttr = "sAMAccountName"; // need to change
         } else if(subjectType.equalsIgnoreCase("pno")) {
-            subjectFormat = "sAMAccountName";
+            subjectFormat = "employeeID";
             userIdAttr = "sAMAccountName";
         } else{
             subjectFormat = "sAMAccountName";
             userIdAttr = "sAMAccountName";
         }
-        
         SearchResult results = null;
         
         try {
