@@ -1,15 +1,25 @@
-ListObjectsV2Request req = new ListObjectsV2Request().withBucketName(s3DataDobiBucket);
-ListObjectsV2Result result;
+States:
+  ListAndProcess:
+    Type: Task
+    Resource: arn:aws:lambda:your-region:your-account:function:ProcessS3Page
+    ResultPath: $.result
+    Next: CheckMore
 
-do {
-    result = s3Client.listObjectsV2(req);
+  CheckMore:
+    Type: Choice
+    Choices:
+      - Variable: $.result.isTruncated
+        BooleanEquals: true
+        Next: ListAndProcessNext
+    Default: Done
 
-    for (S3ObjectSummary objectSummary : result.getObjectSummaries()) {
-        keys.add(objectSummary.getKey());
-        LOGGER.logInfo("All objects retrieved: " + objectSummary.getKey());
-    }
+  ListAndProcessNext:
+    Type: Task
+    Resource: arn:aws:lambda:your-region:your-account:function:ProcessS3Page
+    Parameters:
+      continuationToken.$: $.result.nextContinuationToken
+    ResultPath: $.result
+    Next: CheckMore
 
-    // If there's more to retrieve, set the continuation token
-    req.setContinuationToken(result.getNextContinuationToken());
-
-} while (result.isTruncated());
+  Done:
+    Type: Succeed
