@@ -1,56 +1,32 @@
- public static Map<String, String> getStdIDFromADService(Set<String> userRecords, int partitionSize,  String subjectType) {
-        Map<String, String> resultMap = new HashMap<String, String>();
-        LDAPConnection con = null;
-        SocketFactory socketFactory = null;
-        String subjectFormat = null;
+package com.example;
 
-        String ldapHost = Config.getConfigValue("AD_HOST");
-        int ldapPort = Integer.valueOf(Config.getConfigValue("AD_PORT"));
-        String bindDn = Config.getConfigValue("AD_BINDDN");
-        String bindPw = Config.getConfigValue("AD_PWD");
-        String userIdAttr = "sAMAccountName";
+import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.events.SQSEvent;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 
-        
-        List<List<String>> partitions = getPartitionedList(userRecords, partitionSize);
+import java.util.List;
 
-        if(subjectType.equalsIgnoreCase("email")) {
-            subjectFormat = "mail";
-            userIdAttr = "sAMAccountName"; // need to change
-        } else if(subjectType.equalsIgnoreCase("pno")) {
-            subjectFormat = "employeeID";
-            userIdAttr = "sAMAccountName";
-        } else{
-            subjectFormat = "sAMAccountName";
-            userIdAttr = "sAMAccountName";
+public class Processor implements com.amazonaws.services.lambda.runtime.RequestHandler<SQSEvent, Void> {
+
+    private final S3Client s3 = S3Client.create();
+
+    @Override
+    public Void handleRequest(SQSEvent event, Context context) {
+        String bucket = System.getenv("BUCKET_NAME");
+
+        for (SQSEvent.SQSMessage message : event.getRecords()) {
+            String key = message.getBody();
+
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .build();
+
+            // Example: Just log or download content
+            s3.getObject(getObjectRequest);
+            System.out.println("Processed: " + key);
         }
-        SearchResult results = null;
-        
-        try {
-            socketFactory = SSLSocketFactory.getDefault();
-            System.setProperty("jdk.tls.client.protocols", "TLSv1.2");
-            con = new LDAPConnection(socketFactory, ldapHost, ldapPort, bindDn, bindPw);
-            logger.info("Connected to AD server for converting " + userRecords.size() + " " + subjectFormat + " to Standard IDs");
-            
-            String baseDn = Config.getConfigValue("AD_BASEDN");
-            String standardId = "", inputId = "";
-            String returnAttrs[] = { userIdAttr };
-            List<Filter> filters = new ArrayList<Filter>();
-            SearchRequest searchRequest = null;
-            Filter filter = null;
-            Filter acctypeFilter = null;
-
-            for (List<String> subjectSubLst : partitions) {
-                for (String subject : subjectSubLst) {
-                    filters.add(Filter.createEqualityFilter(subjectFormat, subject));
-                }
-                filter = Filter.createORFilter(filters);
-                
-                filters = new ArrayList<Filter>();
-                filters.add(Filter.createEqualityFilter(BOFA_ACC_TYPE, "Elevated"));
-                filters.add(Filter.createEqualityFilter(BOFA_ACC_TYPE, "Primary"));
-                acctypeFilter =  Filter.createORFilter(filters);
-                
-                filters = new ArrayList<Filter>();
-                filters.add(filter);
-                filters.add(acctypeFilter);
-                filter = Filter.createANDFilter(filters);
+        return null;
+    }
+}
