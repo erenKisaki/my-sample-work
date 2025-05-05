@@ -1,51 +1,41 @@
-from dataclasses import dataclass
-from typing import List
-import json
+def get_oauth_token(self):
+    logger.info("Inside the method of get_oauth_token")
+    try:
+        oauth_arn = env_vars["SecretOauthArn"]
+        smClient = vg.secretsmanager_client.getClient()
+        secret = smClient.get_secret_value(SecretId=oauth_arn)
+        oauth_json = json.loads(secret.get("SecretString"))
+        oauth_id = oauth_json["client_id"]
+        oauth_psd = oauth_json["client_secret"]
 
-@dataclass
-class Fund:
-    dollarAmount: float
-    fundNumber: str
-    positionId: str
-    fundSymbol: str
-    vastAccountNumber: str
+        oauth_url = env_vars["OauthURL"]
+        logger.info(f"OauthURL: {oauth_url}")
 
-@dataclass
-class Transaction:
-    transactionId: str
-    positionId: str
-    fundSymbol: str
-    vastAccountNumber: str
-    newFund: bool
-    isFundMinimumMet: bool
-    isContactEventNeeded: bool
-    transactionType: str
-    isRetirementAccount: bool
-    accountType: str
-    funds: List[Fund]
-    brokerageAccountNumber: str
-    clientId: str
-    accountId: str
-    dollarAmount: float
+        oauth_req_body = self.create_body(oauth_id, oauth_psd)
+        logger.info(f"RequestBody: {oauth_req_body}")
 
-@dataclass
-class Check:
-    checkAmount: float
-    isVanguardCheck: bool
-    isCashEquivalent: bool
-    noteSubType: str
+        access_token = TokenUtils.get_token(oauth_url, oauth_req_body)
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
 
-@dataclass
-class ACKRequestBody:
-    groupId: str
-    igoDatetime: str
-    accountType: str
-    depositNumber: str
-    stubNumber: str
-    stpDocType: str
-    caseForm: str
-    caseHoldoverToGo: bool
-    clientPoid: str
-    checks: List[Check]
-    accountId: str
-    transactions: List[Transaction]
+        # Example payload to POST
+        payload = {
+            "key1": "value1",
+            "key2": "value2"
+        }
+
+        logger.info(f"Sending POST request to {self.ack_url} with headers {headers} and payload {payload}")
+        response = requests.post(self.ack_url, headers=headers, json=payload)
+
+        if response.status_code == 200:
+            logger.info("POST request successful")
+            return response
+        else:
+            logger.error(f"POST request failed with status code {response.status_code}: {response.text}")
+            raise Exception(f"POST request failed with status code {response.status_code}: {response.text}")
+
+    except Exception as e:
+        logger.error(f"Exception occurred in get_oauth_token: {str(e)}")
+        raise
