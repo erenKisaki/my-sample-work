@@ -1,32 +1,51 @@
-package com.example;
+from dataclasses import dataclass
+from typing import List
+import json
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.events.SQSEvent;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+@dataclass
+class Fund:
+    dollarAmount: float
+    fundNumber: str
+    positionId: str
+    fundSymbol: str
+    vastAccountNumber: str
 
-import java.util.List;
+@dataclass
+class Transaction:
+    transactionId: str
+    positionId: str
+    fundSymbol: str
+    vastAccountNumber: str
+    newFund: bool
+    isFundMinimumMet: bool
+    isContactEventNeeded: bool
+    transactionType: str
+    isRetirementAccount: bool
+    accountType: str
+    funds: List[Fund]
+    brokerageAccountNumber: str
+    clientId: str
+    accountId: str
+    dollarAmount: float
 
-public class Processor implements com.amazonaws.services.lambda.runtime.RequestHandler<SQSEvent, Void> {
+@dataclass
+class Check:
+    checkAmount: float
+    isVanguardCheck: bool
+    isCashEquivalent: bool
+    noteSubType: str
 
-    private final S3Client s3 = S3Client.create();
-
-    @Override
-    public Void handleRequest(SQSEvent event, Context context) {
-        String bucket = System.getenv("BUCKET_NAME");
-
-        for (SQSEvent.SQSMessage message : event.getRecords()) {
-            String key = message.getBody();
-
-            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                    .bucket(bucket)
-                    .key(key)
-                    .build();
-
-            // Example: Just log or download content
-            s3.getObject(getObjectRequest);
-            System.out.println("Processed: " + key);
-        }
-        return null;
-    }
-}
+@dataclass
+class ACKRequestBody:
+    groupId: str
+    igoDatetime: str
+    accountType: str
+    depositNumber: str
+    stubNumber: str
+    stpDocType: str
+    caseForm: str
+    caseHoldoverToGo: bool
+    clientPoid: str
+    checks: List[Check]
+    accountId: str
+    transactions: List[Transaction]
