@@ -1,41 +1,25 @@
-def get_oauth_token(self):
-    logger.info("Inside the method of get_oauth_token")
-    try:
-        oauth_arn = env_vars["SecretOauthArn"]
-        smClient = vg.secretsmanager_client.getClient()
-        secret = smClient.get_secret_value(SecretId=oauth_arn)
-        oauth_json = json.loads(secret.get("SecretString"))
-        oauth_id = oauth_json["client_id"]
-        oauth_psd = oauth_json["client_secret"]
+In wih_handler replace line 26, 27 with 
 
-        oauth_url = env_vars["OauthURL"]
-        logger.info(f"OauthURL: {oauth_url}")
+if group_header in ('VLBX VTA APCASE REJECT', 'VLBX VTA APCASE HOLD', 'VLBX VTA APCASE ACCEPT'):
+    if group_header == 'VLBX VTA APCASE ACCEPT':
+        return update_status(group_id)
+    elif group_header == 'VLBX VTA APCASE REJECT':
 
-        oauth_req_body = self.create_body(oauth_id, oauth_psd)
-        logger.info(f"RequestBody: {oauth_req_body}")
-
-        access_token = TokenUtils.get_token(oauth_url, oauth_req_body)
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Content-Type": "application/json"
-        }
-
-        # Example payload to POST
-        payload = {
-            "key1": "value1",
-            "key2": "value2"
-        }
-
-        logger.info(f"Sending POST request to {self.ack_url} with headers {headers} and payload {payload}")
-        response = requests.post(self.ack_url, headers=headers, json=payload)
-
-        if response.status_code == 200:
-            logger.info("POST request successful")
+Also add this new method in wih_handler.py
+    def update_status(self, group_id):
+        logger.info("In update_status method")
+        try:
+            url = f"{self.wih_url}/oauth/groups/{group_id}/status"
+            payload = {
+                "status": "STP INVEST PROCESSING",
+                "comment": "Started STP Process",
+                "precondition": "READYTOROUTE"
+            }
+            response = self.wih_service.put_data(url, payload, self.token)
             return response
-        else:
-            logger.error(f"POST request failed with status code {response.status_code}: {response.text}")
-            raise Exception(f"POST request failed with status code {response.status_code}: {response.text}")
-
-    except Exception as e:
-        logger.error(f"Exception occurred in get_oauth_token: {str(e)}")
-        raise
+        except Exception as e:
+            error_message = (
+                f"Error while updating status for group_id: {group_id} "
+                f"Exception: {str(e)}"
+            )
+            raise ProcessException(error_message) from e
