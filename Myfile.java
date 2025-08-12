@@ -1,59 +1,51 @@
-    // uid & stdid processing
-    if(!adRecords.isEmpty()) {
-    logger.info("**********AD Service Records Processing**********");
-    
-    Map<String, String> uidMap = ADConnect.getStdIdFromADServices(adRecordsSubject, 5, "stdid");
-    
-    for(SSOSplunkEvent eventRec : adRecords) {
-        String stdId = uidMap.get(eventRec.getSubject().toUpperCase());
-        
-        if(isNullOrEmpty(stdId)) {
-            eventRec.setStdId(stdId);
-            ssoEventData.add(eventRec);
-        } else {
-            excludedCount++;
-            adExcludedRecords.add(eventRec.getSubject().toUpperCase());
-            logger.debug("UtilInfo: Std Id not found in CDSN : " + eventRec.toString(Boolean.TRUE));
-        }
-    }
-    }
+// src/test/java/support/TestData.java
+package support;
 
-       // pno processing
-       if(!adPnoRecords.isEmpty()) {
-        logger.info("**********AD Service Records Processing**********");
-        
-        Map<String, String> uidMap = ADConnect.getStdIdFromADServices(adPnoRecordsSubject, 5, "pno");
-        
-        for(SSOSplunkEvent eventRec : adPnoRecords) {
-            String stdId = uidMap.get(eventRec.getSubject().toUpperCase());
-            
-            if(isNullOrEmpty(stdId)) {
-                eventRec.setStdId(stdId);
-                ssoEventData.add(eventRec);
-            } else {
-                excludedCount++;
-                adExcludedRecords.add(eventRec.getSubject().toUpperCase());
-                logger.debug("UtilInfo: Std Id not found in CDSN : " + eventRec.toString(Boolean.TRUE));
-            }
-        }
-    }
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+import java.nio.file.*;
+import java.util.HashMap;
+import java.util.Map;
 
-       // email processing
-       if(!adEmailRecords.isEmpty()) {
-        logger.info("**********AD Service Records Processing**********");
-        
-        Map<String, String> uidMap = ADConnect.getStdIdFromADServices(adEmailRecordsSubject, 5, "email");
-        
-        for(SSOSplunkEvent eventRec : adEmailRecords) {
-            String stdId = uidMap.get(eventRec.getSubject().toUpperCase());
-            
-            if(isNullOrEmpty(stdId)) {
-                eventRec.setStdId(stdId);
-                ssoEventData.add(eventRec);
-            } else {
-                excludedCount++;
-                adExcludedRecords.add(eventRec.getSubject().toUpperCase());
-                logger.debug("UtilInfo: Std Id not found in CDSN : " + eventRec.toString(Boolean.TRUE));
-            }
-        }
-    }
+public final class TestData {
+  private static final Path FILE = Paths.get("target/test-context.json");
+  private static final ObjectMapper M = new ObjectMapper();
+
+  private TestData() {}
+
+  public static synchronized void put(String key, String value) {
+    Map<String,String> data = load();
+    data.put(key, value);
+    try {
+      Files.createDirectories(FILE.getParent());
+      // atomic write
+      Path tmp = Files.createTempFile(FILE.getParent(), "ctx", ".json");
+      M.writeValue(tmp.toFile(), data);
+      Files.move(tmp, FILE, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+    } catch (Exception e) { throw new RuntimeException("Failed to save test data", e); }
+  }
+
+  public static synchronized String get(String key) {
+    return load().get(key);
+  }
+
+  public static synchronized void clear() {
+    try { Files.deleteIfExists(FILE); } catch (Exception ignored) {}
+  }
+
+  private static Map<String,String> load() {
+    try {
+      if (!Files.exists(FILE)) return new HashMap<>();
+      return M.readValue(FILE.toFile(), new TypeReference<Map<String,String>>() {});
+    } catch (Exception e) { throw new RuntimeException("Failed to load test data", e); }
+  }
+}
+
+
+public class Hooks {
+  @Before("@reset-context")
+  public void reset() { support.TestData.clear(); }
+}
+
+  support.TestData.put("otp", otp);
+  support.TestData.put("userId", currentUserId);
