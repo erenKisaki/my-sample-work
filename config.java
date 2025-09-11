@@ -1,44 +1,49 @@
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.function.client.WebClient;
+
 @Configuration
-public class RestTemplateConfig {
+public class WebClientConfig {
 
     @Bean
-    public RestTemplate restTemplate(RestTemplateBuilder builder) {
-        return builder
-                .setConnectTimeout(Duration.ofSeconds(5))
-                .setReadTimeout(Duration.ofSeconds(15))
-                .build();
+    public WebClient webClient(WebClient.Builder builder) {
+        return builder.build();
     }
 }
 
 
+import com.chase.digital.payments.wires.model.ProductRequestBody;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ProductServiceClient {
 
-    private final RestTemplate restTemplate;
-    private final String serviceUrl;
+    private final WebClient webClient;
 
-    public ProductServiceClient(
-            RestTemplate restTemplate,
-            @Value("${wires.service.url:http://localhost:8080/digital-bulk-recipients}") String serviceUrl) {
-        this.restTemplate = restTemplate;
-        this.serviceUrl = serviceUrl;
-    }
+    @Value("${wires.service.url:http://localhost:8080/digital-bulk-recipients}")
+    private String serviceUrl;
 
     public boolean saveFileMetaData(ProductRequestBody request) {
         try {
-            // Headers are optional; Jackson sets application/json automatically.
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
+            String response = webClient.post()
+                    .uri(serviceUrl)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .bodyValue(request)
+                    .retrieve()
+                    .bodyToMono(String.class)     // async stream
+                    .block();                     // block for result (keeps it simple)
 
-            HttpEntity<ProductRequestBody> entity = new HttpEntity<>(request, headers);
-
-            ResponseEntity<String> resp = restTemplate.postForEntity(serviceUrl, entity, String.class);
-            // If we got here, it's a 2xx (non-2xx would have thrown already)
-            log.info("POST {} ok: {}", serviceUrl, resp.getStatusCode());
+            log.info("Successfully sent metadata: {}", response);
             return true;
         } catch (Exception e) {
-            log.error("POST {} failed", serviceUrl, e);
+            log.error("Failed to send ProductRequestBody to {}", serviceUrl, e);
             return false;
         }
     }
