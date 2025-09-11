@@ -1,40 +1,79 @@
-    def update_status(self, group_id):
-        logger.info("In update_status method")
+package com.chase.digital.payments.wires.util;
 
-        try:
-            # Token retrieval
-            token_service = TokenUtils()
-            token = token_service.get_okta_token()
-            headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
+import com.chase.digital.payments.wires.model.ProductRequestBody;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.openxml4j.opc.OPCPackage;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.POIXMLProperties;
+import org.apache.poi.POIXMLProperties.CustomProperties;
+import org.openxmlformats.schemas.officeDocument.x2006.customProperties.CTProperty;
+import org.springframework.web.multipart.MultipartFile;
 
-            # URL setup
-            url = f"{self.wih_url}/oauth/groups/{group_id}/status"
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Objects;
 
-            # Payload as per your doc screenshot
-            payload = {
-                "status": "STP INVEST PROCESSING",
-                "comment": "Started STP Process",
-                "precondition": "READYTOROUTE"
-            }
+public class ExcelMetadataExtractor {
 
-            # API Call
-            response = requests.put(url, json=payload, headers=headers)
+    public ProductRequestBody extractMetadata(final MultipartFile multipartFile) throws IOException {
+        Objects.requireNonNull(multipartFile, "multipartFile must not be null");
 
-            if response.status_code == 200:
-                logger.info("WIH status update call was successful: %s", response.text)
-                msg = "STP_STATUS_UPDATED"
-                publish_sns_notification(msg)
-                return response
+        try (InputStream in = multipartFile.getInputStream();
+             OPCPackage pkg = OPCPackage.open(in);
+             XSSFWorkbook wb = new XSSFWorkbook(pkg)) {
 
-            else:
-                logger.info("WIH status update call was not successful: %s", response.text)
-                msg = "STP_STATUS_UPDATE_FAILED"
-                publish_sns_notification(msg)
-                raise ProcessException(f"Failed Response: {response.text}")
+            POIXMLProperties props = wb.getProperties();
+            CustomProperties custom = props.getCustomProperties();
 
-        except Exception as e:
-            error_message = (
-                f"Error while updating status for group_id: {group_id} "
-                f"Exception: {str(e)}"
-            )
-            raise ProcessException(error_message) from e
+            ProductRequestBody dto = new ProductRequestBody();
+
+            dto.setPfId(getAsString(custom, "pfId"));
+            dto.setSessionId(getAsString(custom, "sessionId"));
+            dto.setEci(getAsString(custom, "eci"));
+            dto.setFileId(getAsString(custom, "fileId"));
+
+            // Use custom property fileName if available, otherwise original file name
+            String fileName = getAsString(custom, "fileName");
+            dto.setFileName(fileName != null ? fileName : multipartFile.getOriginalFilename());
+
+            dto.setTotalRecords(getAsString(custom, "totalRecords"));
+            dto.setValidRecords(getAsString(custom, "validRecords"));
+            dto.setInvalidRecords(getAsString(custom, "invalidRecords"));
+            dto.setUpdateId(getAsString(custom, "updateId"));
+
+            String partial = getAsString(custom, "isPartiallyProcessed");
+            dto.setPartiallyProcessed(parseBoolean(partial));
+
+            dto.setErrorMessage(getAsString(custom, "errorMessage"));
+            dto.setCreusId(getAsString(custom, "creusId"));
+
+            return dto;
+
+        } catch (InvalidFormatException e) {
+            throw new IOException("Invalid Excel format: only .xlsx is supported", e);
+        }
+    }
+
+    private static String getAsString(CustomProperties custom, String name) {
+        if (custom == null || name == null) return null;
+        CTProperty p = custom.getProperty(name);
+        if (p == null) return null;
+
+        if (p.isSetLpwstr()) return p.getLpwstr();
+        if (p.isSetLpstr())  return p.getLpstr();
+        if (p.isSetI4())     return Integer.toString(p.getI4());
+        if (p.isSetI8())     return Long.toString(p.getI8());
+        if (p.isSetR8())     return Double.toString(p.getR8());
+        if (p.isSetDecimal()) return p.getDecimal().toString();
+        if (p.isSetBool())   return Boolean.toString(p.getBool());
+        if (p.isSetDate())   return p.getDate().toString();
+        if (p.isSetFiletime()) return p.getFiletime().toString();
+        return null;
+    }
+
+    private static boolean parseBoolean(String value) {
+        if (value == null) return false;
+        String v = value.trim().toLowerCase();
+        return v.equals("true") || v.equals("1") || v.equals("yes");
+    }
+}
