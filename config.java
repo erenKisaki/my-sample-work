@@ -1,39 +1,42 @@
-package com.example.util;
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-openfeign</artifactId>
+</dependency>
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
-import org.junit.jupiter.api.Test;
-import org.springframework.mock.web.MockMultipartFile;
-
-import java.io.IOException;
-
-class ExcelMetadataExtractorTest {
-
-    @Test
-    void testExtractMetadata_withValidExcel() throws Exception {
-        // Arrange: create a fake excel file with metadata
-        MockMultipartFile multipartFile =
-                new MockMultipartFile("file", "test.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        this.getClass().getResourceAsStream("/test-excel-with-metadata.xlsx"));
-
-        // Act
-        var result = ExcelMetadataExtractor.extractMetadata(multipartFile);
-
-        // Assert
-        assertThat(result).isNotNull();
-        assertThat(result.getFileId()).isEqualTo("12345");
-        assertThat(result.getSessionId()).isEqualTo("test-session");
-        assertThat(result.getFileName()).isEqualTo("test.xlsx");
+    @SpringBootApplication
+@EnableFeignClients
+public class WiresBulkProcessExpApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(WiresBulkProcessExpApplication.class, args);
     }
+}
 
-    @Test
-    void testExtractMetadata_withInvalidFile_throwsException() {
-        MockMultipartFile multipartFile =
-                new MockMultipartFile("file", "bad.txt", "text/plain", "invalid".getBytes());
+package com.chase.digital.payments.wires.client;
 
-        assertThrows(IOException.class,
-                () -> ExcelMetadataExtractor.extractMetadata(multipartFile));
+import com.chase.digital.payments.wires.model.ProductRequestBody;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
+@FeignClient(
+    name = "product-service",
+    url = "${product.service.url:http://localhost:8080}"   // configurable
+)
+public interface ProductServiceClient {
+
+    @PostMapping("/digital-bulk-recipients")
+    void saveFileMetaData(@RequestBody ProductRequestBody request);
+}
+
+
+@Service
+@RequiredArgsConstructor
+public class RecipientImportService {
+
+    private final ProductServiceClient productServiceClient;
+
+    public void process(ProductRequestBody body) {
+        productServiceClient.saveFileMetaData(body);
     }
 }
