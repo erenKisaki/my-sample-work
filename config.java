@@ -1,50 +1,39 @@
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.web.reactive.function.client.WebClient;
+package com.example.util;
 
-@Configuration
-public class WebClientConfig {
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-    @Bean
-    public WebClient webClient(WebClient.Builder builder) {
-        return builder.build();
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockMultipartFile;
+
+import java.io.IOException;
+
+class ExcelMetadataExtractorTest {
+
+    @Test
+    void testExtractMetadata_withValidExcel() throws Exception {
+        // Arrange: create a fake excel file with metadata
+        MockMultipartFile multipartFile =
+                new MockMultipartFile("file", "test.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        this.getClass().getResourceAsStream("/test-excel-with-metadata.xlsx"));
+
+        // Act
+        var result = ExcelMetadataExtractor.extractMetadata(multipartFile);
+
+        // Assert
+        assertThat(result).isNotNull();
+        assertThat(result.getFileId()).isEqualTo("12345");
+        assertThat(result.getSessionId()).isEqualTo("test-session");
+        assertThat(result.getFileName()).isEqualTo("test.xlsx");
     }
-}
 
+    @Test
+    void testExtractMetadata_withInvalidFile_throwsException() {
+        MockMultipartFile multipartFile =
+                new MockMultipartFile("file", "bad.txt", "text/plain", "invalid".getBytes());
 
-import com.chase.digital.payments.wires.model.ProductRequestBody;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
-import org.springframework.stereotype.Service;
-import org.springframework.web.reactive.function.client.WebClient;
-
-@Slf4j
-@Service
-@RequiredArgsConstructor
-public class ProductServiceClient {
-
-    private final WebClient webClient;
-
-    @Value("${wires.service.url:http://localhost:8080/digital-bulk-recipients}")
-    private String serviceUrl;
-
-    public boolean saveFileMetaData(ProductRequestBody request) {
-        try {
-            String response = webClient.post()
-                    .uri(serviceUrl)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .bodyValue(request)
-                    .retrieve()
-                    .bodyToMono(String.class)     // async stream
-                    .block();                     // block for result (keeps it simple)
-
-            log.info("Successfully sent metadata: {}", response);
-            return true;
-        } catch (Exception e) {
-            log.error("Failed to send ProductRequestBody to {}", serviceUrl, e);
-            return false;
-        }
+        assertThrows(IOException.class,
+                () -> ExcelMetadataExtractor.extractMetadata(multipartFile));
     }
 }
