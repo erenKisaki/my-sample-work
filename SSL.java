@@ -1,31 +1,17 @@
-private int addIdsToSelector(List<String> list, String excelHeader, String selectorId) {
-        // Bypass SSL certificate validation
-        SSLContext sslContext;
-        try {
-            sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, new TrustManager[]{new X509TrustManager() {
-                public X509Certificate[] getAcceptedIssuers() { return null; }
-                public void checkClientTrusted(X509Certificate[] certs, String authType) { }
-                public void checkServerTrusted(X509Certificate[] certs, String authType) { }
-            }}, new java.security.SecureRandom());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+import java.security.SecureRandom;
+import java.util.stream.Collectors;
 
-        // Configure the Jersey client
-        ClientConfig clientConfig = new ClientConfig();
-        clientConfig.property("jersey.config.client.ssl.context", sslContext);
+public class RandomAlphaStream {
 
-        HttpAuthenticationFeature feature = HttpAuthenticationFeature.basic("username", "password");
-        clientConfig.register(feature);
+    private static final String ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final SecureRandom RANDOM = new SecureRandom();
 
-        Client client = ClientBuilder.newBuilder().withConfig(clientConfig).sslContext(sslContext).hostnameVerifier((s1, s2) -> true).build();
+    public static void main(String[] args) {
+        String randomString = RANDOM.ints(11, 0, ALPHABETS.length())
+                .mapToObj(ALPHABETS::charAt)
+                .map(String::valueOf)
+                .collect(Collectors.joining());
 
-        WebTarget target = client.target("https://your-service-url.com/api");
-
-        // Create the request
-        Invocation.Builder invocationBuilder = target.request(MediaType.APPLICATION_JSON);
-        Response response = invocationBuilder.post(javax.ws.rs.client.Entity.entity(list, MediaType.APPLICATION_JSON));
-
-        return response.getStatus();
-    }
+        System.out.println("Random String: " + randomString);
+    }
+}
