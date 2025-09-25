@@ -1,3 +1,10 @@
+
+    private static final String ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final String NUMBERS = "0123456789";
+    private static final String ALPHANUMERIC = ALPHABETS + NUMBERS;
+    private static final Random RANDOM = new Random();
+
+
 public static String generateRandomString(boolean onlyAlphabets, int length) {
 
         if (onlyAlphabets) {
