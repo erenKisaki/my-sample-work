@@ -1,34 +1,32 @@
+    private static final String ALPHABETS    = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final String DIGITS       = "0123456789";
+    private static final String ALPHANUMERIC = ALPHABETS + DIGITS;
 
-    private static final String ALPHABETS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static final String NUMBERS = "0123456789";
-    private static final String ALPHANUMERIC = ALPHABETS + NUMBERS;
-    private static final Random RANDOM = new Random();
+    public static String generateRandomString(boolean onlyAlphabets, int length) {
+        if (length <= 0) throw new IllegalArgumentException("length must be > 0");
 
-
-public static String generateRandomString(boolean onlyAlphabets, int length) {
+        ThreadLocalRandom rnd = ThreadLocalRandom.current();
 
         if (onlyAlphabets) {
-            return RANDOM.ints(length, 0, ALPHABETS.length())
-                    .mapToObj(ALPHABETS::charAt)
-                    .map(String::valueOf)
-                    .collect(Collectors.joining());
-        } else {
-            String oneDigit = String.valueOf(NUMBERS.charAt(RANDOM.nextInt(NUMBERS.length())));
-
-            String others = RANDOM.ints(length - 1, 0, ALPHANUMERIC.length())
-                    .mapToObj(ALPHANUMERIC::charAt)
-                    .map(String::valueOf)
-                    .collect(Collectors.joining());
-
-            List<Character> chars = (oneDigit + others)
-                    .chars()
-                    .mapToObj(c -> (char) c)
-                    .collect(Collectors.toList());
-
-            Collections.shuffle(chars);
-
-            return chars.stream()
-                    .map(String::valueOf)
-                    .collect(Collectors.joining());
+            return rnd.ints(length, 0, ALPHABETS.length())
+                      .mapToObj(i -> String.valueOf(ALPHABETS.charAt(i)))
+                      .collect(Collectors.joining());
         }
-}
+
+        if (length == 1) {
+            return String.valueOf(DIGITS.charAt(rnd.nextInt(DIGITS.length())));
+        }
+
+        int digitPos = rnd.nextInt(length);
+        char requiredDigit = DIGITS.charAt(rnd.nextInt(DIGITS.length()));
+
+        return IntStream.range(0, length)
+                .mapToObj(pos -> {
+                    if (pos == digitPos) {
+                        return String.valueOf(requiredDigit);
+                    }
+                    int pick = rnd.nextInt(ALPHANUMERIC.length());
+                    return String.valueOf(ALPHANUMERIC.charAt(pick));
+                })
+                .collect(Collectors.joining());
+    }
