@@ -1,3 +1,92 @@
-Our API has successfully cleared the governance process and has now been fully approved in the API Marketplace, making it available for wider organizational use and consumption. Along with this milestone, the related API documentation has also been reviewed and finalized, ensuring that all technical details, usage guidelines, and integration steps are clearly captured for end users.
+This document outlines the recent changes made to the Jenkins pipeline and API configuration for the Digital Wires Bulk Process Experience. It captures what has been completed, the deployment approach, and the remaining steps required to move from build completion to production rollout.
 
-In parallel, Splunk onboarding has been completed, which means that all relevant application and API logs are now being captured in real time. This integration allows us to monitor, analyze, and troubleshoot effectively, providing greater visibility into system health, performance, and compliance. The observed results and dashboards are documented, enabling seamless tracking and reporting.
+Jenkinsfile (Pipeline Updates)
+
+Shared Libraries Integrated
+
+julesGlobalLibrary
+
+julesContributionLibrary
+
+jules-proxy-deployment-library (Bitbucket)
+
+Closures Defined
+
+generateBundleClosure → Builds the deployable API bundle.
+
+deployApiClosure → Deploys the API bundle using environment-specific OIDC resources.
+
+undeployProxyClosure → Rollback helper for undeploying a proxy.
+
+OIDC Resources
+
+DEV: JPMC:URI:RS-110737-154631-AP6110737DEV-PROD
+
+UAT: JPMC:URI:RS-110737-154632-AP6110737UAT-PROD
+
+PROD: JPMC:URI:RS-110737-154633-AP6110737PROD-PROD
+
+Pipeline Descriptor
+
+Uses jules.yml as the configuration source consumed by the shared library.
+
+✅ Status: Jenkins build completed successfully with these changes.
+
+2. API Configuration (apiconfig.json & Service YAML)
+
+Provider Name: Digital Wires Bulk Process Experience
+
+Environment Bindings
+
+DEV: ccb-dev01, ccb-dev02 → mapped to dev hostnames.
+
+SIT: ccb-sit01, ccb-sit02 → mapped to SIT hostnames.
+
+UAT: ccb-uat01, ccb-uat02, ccb-perf01 → mapped to UAT & performance hostnames.
+
+PROD: ccb-prod01 → mapped with routing rules (PROD_ST0) to staging and production hostnames.
+
+Deployment Specification
+
+Explicit mappings defined per environment ensuring controlled rollouts.
+
+Template Source
+
+Set to CCB_INTERNAL for alignment with internal deployment standards.
+
+✅ Status: Configuration changes are completed and validated against environment topology.
+
+3. Work Completed
+
+Jenkins pipeline updated and tested.
+
+API configuration (environments, routing, hostnames) updated.
+
+Build successfully executed without errors.
+
+4. Next Steps
+Step 1: Deployment
+
+Trigger deployment via Jenkins pipeline.
+
+Begin with DEV, then promote sequentially to SIT → UAT → PROD.
+
+Step 2: Validation / Smoke Testing
+
+Verify endpoints are reachable in each environment.
+
+Confirm routing rules (custom-route header) function correctly.
+
+Validate OIDC authentication across all environments.
+
+Step 3: Rollback (If Required)
+
+Use undeployProxyClosure for undeploying proxies in case of failure.
+
+Rollback process should be validated in non-production before PROD rollout.
+
+Step 4: Monitoring
+
+Monitor deployments via Splunk/API Gateway dashboards.
+
+Validate traffic routing, latency, and error rates.
