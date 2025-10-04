@@ -1,32 +1,61 @@
-    private static final String ALPHABETS    = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    private static final String DIGITS       = "0123456789";
-    private static final String ALPHANUMERIC = ALPHABETS + DIGITS;
+public static ExtentReports getInstance() throws IOException {
+    if (extent == null) {
 
-    public static String generateRandomString(boolean onlyAlphabets, int length) {
-        if (length <= 0) throw new IllegalArgumentException("length must be > 0");
+        FileInputStream fis = new FileInputStream("./src/test/resources/properties/config.properties");
+        config.load(fis);
 
-        ThreadLocalRandom rnd = ThreadLocalRandom.current();
+        String env = config.getProperty("env");
+        timestamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
 
-        if (onlyAlphabets) {
-            return rnd.ints(length, 0, ALPHABETS.length())
-                      .mapToObj(i -> String.valueOf(ALPHABETS.charAt(i)))
-                      .collect(Collectors.joining());
-        }
+        // Your single-file HTML report path (you already had this line)
+        String reportPath = System.getProperty("user.dir") + "/ExtentReports/"
+                + SupportFunctions.tagNameFetch() + "_" + SupportFunctions.getCurrentDateTime() + ".html";
 
-        if (length == 1) {
-            return String.valueOf(DIGITS.charAt(rnd.nextInt(DIGITS.length())));
-        }
+        // ➜ NEW: ensure parent folder exists
+        Path reportFile = Paths.get(reportPath);
+        Files.createDirectories(reportFile.getParent());
 
-        int digitPos = rnd.nextInt(length);
-        char requiredDigit = DIGITS.charAt(rnd.nextInt(DIGITS.length()));
+        // Build reporter with the FILE path (unchanged)
+        ExtentSparkReporter spark = new ExtentSparkReporter(reportPath);
 
-        return IntStream.range(0, length)
-                .mapToObj(pos -> {
-                    if (pos == digitPos) {
-                        return String.valueOf(requiredDigit);
-                    }
-                    int pick = rnd.nextInt(ALPHANUMERIC.length());
-                    return String.valueOf(ALPHANUMERIC.charAt(pick));
-                })
-                .collect(Collectors.joining());
+        spark.config().setDocumentTitle("Test Results");
+        spark.config().setReportName("CIAM-Automation-Report");
+        spark.config().setTheme(Theme.DARK);
+
+        extent = new ExtentReports();
+        extent.attachReporter(spark);
+
+        extent.setSystemInfo("OS", System.getProperty("os.name"));
+        extent.setSystemInfo("Tester", System.getProperty("user.name"));
+        extent.setSystemInfo("Environment", env);
+        extent.setSystemInfo("Release Name", config.getProperty("BuildNumber"));
+
+        // ➜ UPDATED: add a shutdown hook that FLUSHES first, then injects CSS/JS
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                if (extent != null) {
+                    extent.flush();                // <<< this is the crucial bit
+                }
+                injectCustomCSSAndJS(reportPath);   // now the file exists, safe to patch it
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }));
     }
+    return extent;
+}
+
+
+public static void flushReport() {
+    if (extent != null) {
+        extent.flush();
+    }
+}
+@AfterSuite
+public void afterSuite() {
+    ExtentReporterManager.flushReport();
+}
+@io.cucumber.java.AfterAll
+public static void afterAll() {
+    ExtentReporterManager.flushReport();
+}
