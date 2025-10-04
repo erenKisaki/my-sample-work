@@ -1,124 +1,177 @@
-package com.chase.digital.payments.wires.componentTest.stepdef;
+package your.pkg.reports;
 
-import com.chase.digital.payments.wires.componentTest.config.BaseTestConfig;
-import io.cucumber.java.en.And;
-import io.cucumber.java.en.Then;
-import org.junit.jupiter.api.Assertions;
-import org.mockito.ArgumentMatchers;
-import org.mockito.Mockito;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.dao.DataAccessException;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.ContextConfiguration;
+import com.aventstack.extentreports.ExtentReports;
+import com.aventstack.extentreports.reporter.ExtentSparkReporter;
+import com.aventstack.extentreports.reporter.configuration.Theme;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Properties;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
-@SpringBootTest
-@ContextConfiguration(classes = { BaseTestConfig.class })
-public class BulkProcessStepsSaveMetadataApi {
+public final class ExtentReporterManager {
 
-    @MockBean
-    private JdbcTemplate jdbcTemplate; // mocked “H2” access
+    private static volatile ExtentReports extent;
+    private static final Object LOCK = new Object();
 
-    private String insertedId;
+    private static String timestamp;
+    private static String reportBaseDir;   // folder containing the report
+    private static String reportHtmlPath;  // .../index.html actually written
+    private static final Properties config = new Properties();
 
-    @And("1.2 The file metadata is stored to Local h2 database")
-    public void storeDataIntoH2DB() {
-        // fresh stubbing for this step
-        Mockito.reset(jdbcTemplate);
+    private ExtentReporterManager() {}
 
-        insertedId = "file-123";
-        String insertSql = "INSERT INTO file_metadata (file_id, file_name, status) VALUES (?, ?, ?)";
-        String countSql  = "SELECT COUNT(*) FROM file_metadata WHERE file_id = ?";
-
-        // mock: INSERT returns 1 row updated
-        Mockito.when(jdbcTemplate.update(
-                Mockito.eq(insertSql),
-                Mockito.eq(insertedId), Mockito.eq("sample.pdf"), Mockito.eq("STORED")
-        )).thenReturn(1);
-
-        // mock: COUNT(*) returns 1 after insert
-        Mockito.when(jdbcTemplate.queryForObject(
-                Mockito.eq(countSql),
-                Mockito.eq(Integer.class),
-                Mockito.eq(insertedId)
-        )).thenReturn(1);
-
-        // call mocked operations (what your prod code would do)
-        int updated = jdbcTemplate.update(insertSql, insertedId, "sample.pdf", "STORED");
-        Assertions.assertEquals(1, updated, "Insert did not affect any rows (mock)");
-
-        Integer count = jdbcTemplate.queryForObject(countSql, Integer.class, insertedId);
-        Assertions.assertEquals(1, count, "Record not found in mocked H2 after insert");
-
-        // verify interactions
-        Mockito.verify(jdbcTemplate).update(insertSql, insertedId, "sample.pdf", "STORED");
-        Mockito.verify(jdbcTemplate).queryForObject(countSql, Integer.class, insertedId);
-    }
-
-    @Then("1.3 I get 200 OK")
-    public void validateResponseForFileMetadata() {
-        Mockito.reset(jdbcTemplate);
-
-        String selectSql = "SELECT * FROM file_metadata WHERE file_id = ?";
-        Map<String, Object> row = new HashMap<>();
-        row.put("file_id", insertedId);
-        row.put("file_name", "sample.pdf");
-        row.put("status", "STORED");
-
-        Mockito.when(jdbcTemplate.queryForMap(
-                Mockito.eq(selectSql),
-                Mockito.eq(insertedId)
-        )).thenReturn(row);
-
-        Map<String, Object> got = jdbcTemplate.queryForMap(selectSql, insertedId);
-        Assertions.assertNotNull(got, "No row returned from mocked H2");
-        Assertions.assertEquals("sample.pdf", got.get("file_name"));
-        Assertions.assertEquals("STORED",     got.get("status"));
-
-        Mockito.verify(jdbcTemplate).queryForMap(selectSql, insertedId);
-    }
-
-    @Then("3.1 Failed to Store to local h2 database")
-    public void failedStoreToH2DB() {
-        Mockito.reset(jdbcTemplate);
-
-        String failingId = "fail-001";
-        String insertSql = "INSERT INTO file_metadata (file_id, file_name, status) VALUES (?, ?, ?)";
-
-        // make only this specific insert throw (simulates H2/constraint error)
-        Mockito.when(jdbcTemplate.update(
-                Mockito.eq(insertSql),
-                Mockito.eq(failingId), Mockito.eq("bad.pdf"), Mockito.eq("PENDING")
-        )).thenThrow(new DataAccessException("Simulated H2 failure") {});
-
-        try {
-            jdbcTemplate.update(insertSql, failingId, "bad.pdf", "PENDING");
-            Assertions.fail("Expected simulated H2 failure did not occur");
-        } catch (DataAccessException expected) {
-            // ok
+    /** Get (or create) the singleton ExtentReports instance. */
+    public static ExtentReports getInstance() {
+        if (extent == null) {
+            synchronized (LOCK) {
+                if (extent == null) {
+                    try {
+                        loadConfig();
+                        setupPaths();
+                        extent = buildExtent(reportHtmlPath);
+                        addShutdownHook();
+                    } catch (IOException ioe) {
+                        throw new RuntimeException("Failed to initialise ExtentReports", ioe);
+                    }
+                }
+            }
         }
+        return extent;
+    }
 
-        // if your code checks existence after a failed insert, stub it to 0
-        Mockito.when(jdbcTemplate.queryForObject(
-                Mockito.eq("SELECT COUNT(*) FROM file_metadata WHERE file_id = ?"),
-                Mockito.eq(Integer.class),
-                Mockito.eq(failingId)
-        )).thenReturn(0);
+    /** Call this once at the very end (listener/hook does this for you). */
+    public static void flush() {
+        if (extent != null) {
+            extent.flush();
+        }
+    }
 
-        Integer count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM file_metadata WHERE file_id = ?",
-                Integer.class, failingId
-        );
-        Assertions.assertEquals(0, count, "Row should not exist for failing id in mocked H2");
+    /** Optional: zip the whole report directory (HTML, CSS/JS, assets) to the given zip file. */
+    public static void compressReportFolder(String zipFilePath) throws IOException {
+        if (reportBaseDir == null) return;
+        Path base = Paths.get(reportBaseDir);
+        try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFilePath))) {
+            Files.walk(base)
+                 .filter(Files::isRegularFile)
+                 .forEach(p -> {
+                     String rel = base.relativize(p).toString().replace("\\", "/");
+                     try (InputStream in = Files.newInputStream(p)) {
+                         zos.putNextEntry(new ZipEntry(rel));
+                         byte[] buf = new byte[4096];
+                         int len;
+                         while ((len = in.read(buf)) > 0) {
+                             zos.write(buf, 0, len);
+                         }
+                         zos.closeEntry();
+                     } catch (IOException e) {
+                         throw new UncheckedIOException(e);
+                     }
+                 });
+        }
+    }
 
-        Mockito.verify(jdbcTemplate).update(insertSql, failingId, "bad.pdf", "PENDING");
-        Mockito.verify(jdbcTemplate).queryForObject(
-                Mockito.eq("SELECT COUNT(*) FROM file_metadata WHERE file_id = ?"),
-                Mockito.eq(Integer.class),
-                Mockito.eq(failingId)
-        );
+    // ---------- internals ----------
+
+    private static void loadConfig() throws IOException {
+        // Load from classpath: src/test/resources/properties/config.properties
+        try (InputStream is = ExtentReporterManager.class
+                .getClassLoader()
+                .getResourceAsStream("properties/config.properties")) {
+            if (is != null) {
+                config.load(is);
+            }
+        }
+    }
+
+    private static void setupPaths() throws IOException {
+        timestamp = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date());
+        // Example: ExtentReports/Smoke_2025-10-04_20-10-22/
+        String tag = safe(config.getProperty("tag"),
+                SupportFunctions.tagNameFetch()); // your helper; falls back to config "tag"
+        reportBaseDir = Paths.get(System.getProperty("user.dir"),
+                "ExtentReports", tag + "_" + timestamp).toString();
+        Files.createDirectories(Paths.get(reportBaseDir));
+        reportHtmlPath = Paths.get(reportBaseDir, "index.html").toString(); // always "index.html"
+    }
+
+    private static ExtentReports buildExtent(String htmlPath) {
+        ExtentSparkReporter spark = new ExtentSparkReporter(htmlPath);
+        spark.config().setDocumentTitle("Test Results");
+        spark.config().setReportName("CIAM-Automation-Report");
+        spark.config().setTheme(Theme.DARK);
+
+        ExtentReports er = new ExtentReports();
+        er.attachReporter(spark);
+
+        // System info
+        String env = safe(config.getProperty("env"), "local");
+        er.setSystemInfo("OS", System.getProperty("os.name"));
+        er.setSystemInfo("Tester", System.getProperty("user.name"));
+        er.setSystemInfo("Environment", env);
+        er.setSystemInfo("Release Name", safe(config.getProperty("BuildNumber"), "NA"));
+
+        return er;
+    }
+
+    private static void addShutdownHook() {
+        // Ensure flush happens even if runner forgets, then inject CSS/JS if you use it.
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                flush();
+                injectCustomCSSAndJS(reportBaseDir); // no-op if you don’t have custom files
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }));
+    }
+
+    /**
+     * If you have files src/test/resources/report/custom.css or custom.js,
+     * they’ll be copied next to index.html and linked into it.
+     */
+    private static void injectCustomCSSAndJS(String dir) throws IOException {
+        Path base = Paths.get(dir);
+        Path html = base.resolve("index.html");
+        if (!Files.exists(html)) return;
+
+        // Copy optional resources
+        Path cssSrc = getResourceToFile("report/custom.css", base.resolve("custom.css"));
+        Path jsSrc  = getResourceToFile("report/custom.js",  base.resolve("custom.js"));
+
+        if (cssSrc == null && jsSrc == null) return;
+
+        String htmlText = Files.readString(html, StandardCharsets.UTF_8);
+        StringBuilder inject = new StringBuilder();
+        if (cssSrc != null) inject.append("<link rel=\"stylesheet\" href=\"custom.css\" />\n");
+        if (jsSrc  != null) inject.append("<script src=\"custom.js\"></script>\n");
+
+        // Insert before </head>
+        String patched = htmlText.replace("</head>", inject.toString() + "</head>");
+        Files.writeString(html, patched, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
+    }
+
+    private static Path getResourceToFile(String resourcePath, Path dest) throws IOException {
+        try (InputStream is = ExtentReporterManager.class.getClassLoader().getResourceAsStream(resourcePath)) {
+            if (is == null) return null;
+            Files.copy(is, dest, StandardCopyOption.REPLACE_EXISTING);
+            return dest;
+        }
+    }
+
+    public static String getReportBaseDir() {
+        return reportBaseDir;
+    }
+
+    public static String getReportHtmlPath() {
+        return reportHtmlPath;
+    }
+
+    private static String safe(String v, String def) {
+        return (v == null || v.isBlank()) ? def : v;
     }
 }
