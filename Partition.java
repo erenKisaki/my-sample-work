@@ -1,5 +1,3 @@
-String otp = null;
-
 ExecutorService executor = Executors.newSingleThreadExecutor();
 Future<String> future = executor.submit(() -> 
     JOptionPane.showInputDialog("Enter the OTP received on your email or phone (You have 5 minutes):")
