@@ -1,3 +1,6 @@
-long defaultStartTime = getLongProperty(AUTOPAY_START_00_TIME, 0L);
-long defaultEventTime = getLongProperty(AUTOPAY_AUTH_EXECUTED, 0L);
-long defaultEndTime   = getLongProperty(AUTOPAY_HEALTH_DEFAULT_TIME, 0L);
+LocalDateTime ldt = LocalDateTime.ofInstant(
+            calendar.toInstant(),
+            calendar.getTimeZone().toZoneId()
+    );
+
+var currentDateExecution =  LocalDateTime.parse(ldt.format(ORACLE_FORMAT), ORACLE_FORMAT);
