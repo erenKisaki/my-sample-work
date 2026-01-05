@@ -1,18 +1,37 @@
-private LocalDateTime getNextDateTimeForDay(String dayName, LocalTime ruleTime) {
-    DayOfWeek targetDay = DayOfWeek.valueOf(dayName.toUpperCase());
-    LocalDate today = LocalDate.now();
-    LocalDate nextDate = today.with(TemporalAdjusters.nextOrSame(targetDay));
-    return LocalDateTime.of(nextDate, ruleTime);
-}
+import java.util.Random;
 
-// it should be added in else part
+public class KeyGenerator {
 
-LocalTime ruleTime = convertToLocalTime(rule.getTime());
+    private static final Random random = new Random();
 
-    LocalDateTime ruleDateTime = getNextDateTimeForDay(rule.getDay(), ruleTime);
+    public static String randomPrimaryKey() {
+        String chars = "12345";
+        int length = 5;
+        StringBuilder result = new StringBuilder();
 
-    if (ruleDateTime.isBefore(dateExecution)) {
-        ruleDateTime = ruleDateTime.plusWeeks(1);
+        for (int i = length; i > 0; i--) {
+            int index = random.nextInt(chars.length());
+            result.append(chars.charAt(index));
+        }
+
+        return result.toString();
     }
 
-    ruleMatchedDateTimes.add(ruleDateTime);
+    public static String randomSecondaryKey() {
+        String chars = "123";
+        int length = 3;
+        StringBuilder result = new StringBuilder();
+
+        for (int i = length; i > 0; i--) {
+            int index = random.nextInt(chars.length());
+            result.append(chars.charAt(index));
+        }
+
+        return result.toString();
+    }
+
+    public static void main(String[] args) {
+        System.out.println("Primary Key   : " + randomPrimaryKey());
+        System.out.println("Secondary Key : " + randomSecondaryKey());
+    }
+}
