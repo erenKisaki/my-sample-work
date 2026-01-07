@@ -1,7 +1,20 @@
-ZoneId estZone = ZoneId.of("America/New_York");
+private LocalDateTime getNextRun(LocalDateTime previousRun, LocalDateTime currentDate) {
 
-Date scheduledDate = paymentProcessing.getScheduledDate();
+    if (previousRun == null) {
+        return currentDate;   // your original first assignment
+    }
 
-LocalDateTime currentDateTime= scheduledDate.toInstant()
-        .atZone(estZone)
-        .toLocalDateTime();
+    LocalDate nextDate = previousRun.toLocalDate().plusDays(1);
+
+    while (isWeekend(nextDate)) {
+        nextDate = nextDate.plusDays(1);
+    }
+
+    return LocalDateTime.of(nextDate, previousRun.toLocalTime());
+}
+
+
+    private boolean isWeekend(LocalDate date) {
+        return date.getDayOfWeek() == DayOfWeek.SATURDAY ||
+               date.getDayOfWeek() == DayOfWeek.SUNDAY;
+    }
