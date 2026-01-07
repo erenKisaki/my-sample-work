@@ -1,20 +1,16 @@
-private LocalDateTime getNextRun(LocalDateTime previousRun, LocalDateTime currentDate) {
+ public LocalDateTime getEligibleNextRun(LocalDateTime currentDate) {
 
-    if (previousRun == null) {
-        return currentDate;   // your original first assignment
-    }
+        boolean isEligibleRunFound = false;
+        LocalDateTime runDate = null;
 
-    LocalDate nextDate = previousRun.toLocalDate().plusDays(1);
+        while (!isEligibleRunFound) {
 
-    while (isWeekend(nextDate)) {
-        nextDate = nextDate.plusDays(1);
-    }
+            runDate = getNextRun(runDate, currentDate);
 
-    return LocalDateTime.of(nextDate, previousRun.toLocalTime());
-}
+            if (isExceptionQualified(runDate)) {
+                isEligibleRunFound = true;
+            }
+        }
 
-
-    private boolean isWeekend(LocalDate date) {
-        return date.getDayOfWeek() == DayOfWeek.SATURDAY ||
-               date.getDayOfWeek() == DayOfWeek.SUNDAY;
+        return runDate;
     }
