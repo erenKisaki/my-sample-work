@@ -1,16 +1,5 @@
- public LocalDateTime getEligibleNextRun(LocalDateTime currentDate) {
+ZoneId estZone = ZoneId.of("America/New_York");
 
-        boolean isEligibleRunFound = false;
-        LocalDateTime runDate = null;
-
-        while (!isEligibleRunFound) {
-
-            runDate = getNextRun(runDate, currentDate);
-
-            if (isExceptionQualified(runDate)) {
-                isEligibleRunFound = true;
-            }
-        }
-
-        return runDate;
-    }
+var currentDateTime= scheduledDate.toInstant()
+        .atZone(estZone)
+        .toLocalDateTime();
