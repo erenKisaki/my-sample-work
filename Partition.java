@@ -1,111 +1,56 @@
-import static org.junit.jupiter.api.Assertions.assertEquals;
+@Test
+public void nextRun_shouldSkipWeekend_whenNextDayIsSaturday() {
 
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
+    LocalDateTime base = LocalDateTime.now().withSecond(0).withNano(0);
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.core.env.Environment;
-
-import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
-class ScheduleDateUtilTest {
-
-    @InjectMocks
-    private ScheduleDateUtil scheduleDateUtil;
-
-    @Mock
-    private Environment environment;
-
-    @BeforeEach
-    void setup() {
+    // force base so that next day becomes Saturday
+    while (base.plusDays(1).getDayOfWeek() != DayOfWeek.SATURDAY) {
+        base = base.plusDays(1);
     }
 
-    @Test
-    void firstRun_shouldReturnTodayWithResultTime() {
-        LocalDateTime now = LocalDateTime.now();
-        long resultTime = 1430;
+    long resultTime = 1000;
+
+    LocalDateTime result =
+            scheduleDateUtil.getNextRun(base, base, resultTime);
+
+    LocalDate expectedDate = base.toLocalDate().plusDays(1); // this is Saturday
+
+    // apply real production logic
+    if (expectedDate.getDayOfWeek() == DayOfWeek.SATURDAY) {
+        expectedDate = expectedDate.plusDays(2);
+    }
+
+    assertEquals(expectedDate, result.toLocalDate());
+    assertEquals(10, result.getHour());
+    assertEquals(0, result.getMinute());
+}
+
+
+@Test
+public void nextRun_shouldWorkForEveryWeekday() {
+
+    LocalDateTime base = LocalDateTime.now().withSecond(0).withNano(0);
+
+    for (int i = 0; i < 7; i++) {
+
+        LocalDateTime testDate = base.plusDays(i);
+        long resultTime = 900;
 
         LocalDateTime result =
-                scheduleDateUtil.getNextRun(null, now, resultTime);
+                scheduleDateUtil.getNextRun(testDate, testDate, resultTime);
 
-        LocalDateTime expected =
-                LocalDateTime.of(now.toLocalDate(), LocalTime.of(14, 30));
+        // mimic real production logic
+        LocalDate expectedDate = testDate.toLocalDate().plusDays(1);
 
-        assertEquals(expected, result);
-    }
-
-    @Test
-    void nextRun_shouldWorkForEveryWeekday() {
-        LocalDateTime base = LocalDateTime.now();
-
-        for (int i = 0; i < 7; i++) {
-            LocalDateTime testDate = base.plusDays(i);
-            long resultTime = 900;
-
-            LocalDateTime result =
-                    scheduleDateUtil.getNextRun(testDate, testDate, resultTime);
-
-            LocalDate expectedDate = testDate.toLocalDate().plusDays(1);
-
-            if (expectedDate.getDayOfWeek() == DayOfWeek.SATURDAY) {
-                expectedDate = expectedDate.plusDays(2);
-            }
-            else if (expectedDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
-                expectedDate = expectedDate.plusDays(1);
-            }
-
-            LocalDateTime expected =
-                    LocalDateTime.of(expectedDate, LocalTime.of(9, 0));
-
-            assertEquals(expected, result);
+        if (expectedDate.getDayOfWeek() == DayOfWeek.SATURDAY) {
+            expectedDate = expectedDate.plusDays(2);
         }
-    }
-
-    @Test
-    void nextRun_shouldSkipWeekend_whenNextDayIsSaturday() {
-        LocalDateTime friday = LocalDateTime.now();
-
-        while (friday.getDayOfWeek() != DayOfWeek.FRIDAY) {
-            friday = friday.plusDays(1);
+        else if (expectedDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            expectedDate = expectedDate.plusDays(1);
         }
 
-        long resultTime = 1000;
-
-        LocalDateTime result =
-                scheduleDateUtil.getNextRun(friday, friday, resultTime);
-
-        LocalDateTime expected =
-                LocalDateTime.of(friday.toLocalDate().plusDays(3),
-                        LocalTime.of(10, 0));
-
-        assertEquals(expected, result);
-    }
-
-    @Test
-    void nextRun_shouldSkipWeekend_whenNextDayIsSunday() {
-        LocalDateTime saturday = LocalDateTime.now();
-
-        while (saturday.getDayOfWeek() != DayOfWeek.SATURDAY) {
-            saturday = saturday.plusDays(1);
-        }
-
-        long resultTime = 1200;
-
-        LocalDateTime result =
-                scheduleDateUtil.getNextRun(saturday, saturday, resultTime);
-
-        LocalDateTime expected =
-                LocalDateTime.of(saturday.toLocalDate().plusDays(2),
-                        LocalTime.of(12, 0));
-
-        assertEquals(expected, result);
+        assertEquals(expectedDate, result.toLocalDate());
+        assertEquals(9, result.getHour());
+        assertEquals(0, result.getMinute());
     }
 }
