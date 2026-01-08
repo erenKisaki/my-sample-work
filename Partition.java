@@ -1,39 +1,59 @@
-public LocalDateTime getEligibleNextRun(LocalDateTime currentDate,
-                                        LocalDateTime scheduleDate,
-                                        PaymentProcessing paymentProcessing,
-                                        long resultTime) {
+private boolean isAnyExceptionRuleMatches(LocalDateTime runDate,
+                                          LocalDateTime scheduleDate,
+                                          String errorCode) {
 
-    boolean isEligibleRunFound = false;
-    LocalDateTime runDate = null;
+	var nextScheduleDate = runDate;
 
-    // Track first attempt and second attempt
-    int attempts = 0;
-    LocalDateTime fallbackNextDay = null;
+    List<BatchRetryCustomException> retryCustomExceptionList =
+            BatchPaymentWorkflowUtil.getActiveCustomExceptionList();
+			
 
-    while (!isEligibleRunFound) {
+    if (CollectionUtils.isNotEmpty(retryCustomExceptionList)) {
 
-        runDate = getNextRun(runDate, currentDate, resultTime);
+        for (BatchRetryCustomException exceptionRule : retryCustomExceptionList) {
+		
+			if (StringUtils.isNotEmpty(exceptionRule.getIncludeError()) && StringUtils.isNotEmpty(errorCode)
+				&& exceptionRule.getIncludeError().equalsIgnoreCase(errorCode)) {
+				var base = runDate.toLocalDate();
 
-        // Save "plus one day" as fallback
-        if (attempts == 0) {
-            fallbackNextDay = runDate;
-        }
+				var fixedRuleDate = resolveDateFromRuleDay(base, exceptionRule.getDay()); // get the Day
+				nextScheduleDate = LocalDateTime.of(fixedRuleDate, convertToLocalTime(exceptionRule.getTime()));
+				
+			} else if ((isExceptionDayMatches(exceptionRule, runDate)
+                    && isExceptionDayOfTheMonthMatches(exceptionRule, runDate))
+                    && !isErrorCodeMatches(exceptionRule.getExcludeError(), errorCode)) {
 
-        if (isAnyExceptionRuleMatches(runDate,
-                                      scheduleDate,
-                                      paymentProcessing.getErrorCode())) {
-            isEligibleRunFound = true;
-        }
+                nextScheduleDate =
+                        LocalDateTime.of(runDate.toLocalDate(),
+                                convertToLocalTime(exceptionRule.getTime()));
+                
+            }
+			
+			if (nextScheduleDate.isAfter(scheduleDate)) {
 
-        attempts++;
+                    runDate = nextScheduleDate;
 
-        // After checking current date & plus one day → apply default
-        if (!isEligibleRunFound && attempts >= 2) {
-            return fallbackNextDay;
+                    LOGGER.info("Eligible run date found matching exception rule: {} for run date: {}",
+                            exceptionRule, runDate);
+
+                    return true;
+             }
         }
     }
 
-    return runDate;
+    return false;
 }
 
 
+private LocalDate resolveDateFromRuleDay(LocalDate baseDate, String ruleDay) {
+    if (ruleDay == null || ruleDay.isBlank()) {
+        return baseDate;
+    }
+
+    DayOfWeek targetDay = DayOfWeek.valueOf(ruleDay.toUpperCase());
+
+    int diff = targetDay.getValue() - baseDate.getDayOfWeek().getValue();
+    if (diff < = 0) diff += 7;
+
+    return baseDate.plusDays(diff);
+}
