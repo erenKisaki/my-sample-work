@@ -1,7 +1,10 @@
+
+@RunWith(PowerMockRunner.class)
+@PrepareForTest(BatchPaymentWorkListUtil.class);
+
 List<BatchRetryCustomException> mockExceptions = new ArrayList<>();
 
-MockedStatic<BatchPaymentWorkListUtil> mocked =
-                 mockStatic(BatchPaymentWorkListUtil.class);
+PowerMockito.mockStatic(BatchPaymentWorkListUtil.class);
 
- mocked.when(BatchPaymentWorkListUtil::getBatchRetryCustomExceptionList)
-              .thenReturn(mockExceptions);
+PowerMockito.when(BatchPaymentWorkListUtil.getBatchRetryCustomExceptionList())
+            .thenReturn(mockExceptions);
