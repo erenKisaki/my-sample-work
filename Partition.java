@@ -1,2 +1,2 @@
 var fixedRuleDate = resolveDateFromRuleDay(runDate.toLocalDate(), exceptionRule.getDay());
-				nextScheduleDate = LocalDateTime.of(fixedRuleDate, convertToLocalTime(exceptionRule.getTime()));
+exceptionDate = LocalDateTime.of(fixedRuleDate, convertToLocalTime(exceptionRule.getTime()));
