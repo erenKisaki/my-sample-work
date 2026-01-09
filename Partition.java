@@ -1,56 +1,131 @@
-@Test
-public void nextRun_shouldSkipWeekend_whenNextDayIsSaturday() {
+@Component
+public class ScheduleDateUtil {
 
-    LocalDateTime base = LocalDateTime.now().withSecond(0).withNano(0);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ScheduleDateUtil.class);
 
-    // force base so that next day becomes Saturday
-    while (base.plusDays(1).getDayOfWeek() != DayOfWeek.SATURDAY) {
-        base = base.plusDays(1);
-    }
+    @Autowired
+    private Environment environment;
 
-    long resultTime = 1000;
+    // =====================================================
+    // ENTRY POINT
+    // =====================================================
+    public LocalDateTime getEligibleNextRun(LocalDateTime currentDate,
+                                            long retryCount,
+                                            List<BatchReauthCustomException> exceptionList) {
 
-    LocalDateTime result =
-            scheduleDateUtil.getNextRun(base, base, resultTime);
+        // 1️⃣ Evaluate current date
+        RunEvaluation today = evaluateRun(currentDate, retryCount, exceptionList);
 
-    LocalDate expectedDate = base.toLocalDate().plusDays(1); // this is Saturday
-
-    // apply real production logic
-    if (expectedDate.getDayOfWeek() == DayOfWeek.SATURDAY) {
-        expectedDate = expectedDate.plusDays(2);
-    }
-
-    assertEquals(expectedDate, result.toLocalDate());
-    assertEquals(10, result.getHour());
-    assertEquals(0, result.getMinute());
-}
-
-
-@Test
-public void nextRun_shouldWorkForEveryWeekday() {
-
-    LocalDateTime base = LocalDateTime.now().withSecond(0).withNano(0);
-
-    for (int i = 0; i < 7; i++) {
-
-        LocalDateTime testDate = base.plusDays(i);
-        long resultTime = 900;
-
-        LocalDateTime result =
-                scheduleDateUtil.getNextRun(testDate, testDate, resultTime);
-
-        // mimic real production logic
-        LocalDate expectedDate = testDate.toLocalDate().plusDays(1);
-
-        if (expectedDate.getDayOfWeek() == DayOfWeek.SATURDAY) {
-            expectedDate = expectedDate.plusDays(2);
-        }
-        else if (expectedDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
-            expectedDate = expectedDate.plusDays(1);
+        if (today.exceptionMatched) {
+            return today.runDate;
         }
 
-        assertEquals(expectedDate, result.toLocalDate());
-        assertEquals(9, result.getHour());
-        assertEquals(0, result.getMinute());
+        // 2️⃣ Move to next business day first
+        LocalDate nextBusinessDay =
+                getRunDateSkippingWeekends(currentDate.toLocalDate().plusDays(1));
+
+        LocalDateTime candidateBase =
+                LocalDateTime.of(nextBusinessDay, today.runDate.toLocalTime());
+
+        // 3️⃣ Evaluate candidate date
+        RunEvaluation candidate = evaluateRun(candidateBase, retryCount, exceptionList);
+
+        return candidate.runDate;
     }
+
+    // =====================================================
+    // CORE ENGINE
+    // =====================================================
+    private RunEvaluation evaluateRun(LocalDateTime baseDate,
+                                      long retryCount,
+                                      List<BatchReauthCustomException> exceptionList) {
+
+        long oddTime  = getLongProperty("CATDPAY_REAUTH_ODD_TIME",  1000L);
+        long evenTime = getLongProperty("CATDPAY_REAUTH_EVEN_TIME", 1800L);
+
+        long selectedTime = (retryCount % 2 == 0) ? evenTime : oddTime;
+
+        LocalDateTime run = LocalDateTime.of(
+                baseDate.toLocalDate(),
+                convertToLocalTime(selectedTime)
+        );
+
+        boolean exceptionMatched = false;
+
+        for (BatchReauthCustomException rule : exceptionList) {
+            if (isExceptionDayMatches(rule, baseDate)
+             || isExceptionDayOfMonthMatches(rule, baseDate)) {
+
+                exceptionMatched = true;
+
+                LocalDateTime exceptionTime = LocalDateTime.of(
+                        baseDate.toLocalDate(),
+                        convertToLocalTime(rule.getTime())
+                );
+
+                if (exceptionTime.isAfter(run)) {
+                    run = exceptionTime;
+                }
+            }
+        }
+
+        return new RunEvaluation(run, exceptionMatched);
+    }
+
+    // =====================================================
+    // WEEKEND HANDLING
+    // =====================================================
+    private LocalDate getRunDateSkippingWeekends(LocalDate runDate) {
+
+        long saturdayLogic = getLongProperty("CATDPAY_REAUTH_SATURDAY_LOGIC", 2L);
+        long sundayLogic   = getLongProperty("CATDPAY_REAUTH_SUNDAY_LOGIC",   1L);
+
+        if (runDate.getDayOfWeek() == DayOfWeek.SATURDAY) {
+            return runDate.plusDays(saturdayLogic);
+        }
+
+        if (runDate.getDayOfWeek() == DayOfWeek.SUNDAY) {
+            return runDate.plusDays(sundayLogic);
+        }
+
+        return runDate;
+    }
+
+    // =====================================================
+    // MATCH HELPERS
+    // =====================================================
+    private boolean isExceptionDayMatches(BatchReauthCustomException rule, LocalDateTime date) {
+        return rule.getDay() != null &&
+               date.getDayOfWeek().name().equalsIgnoreCase(rule.getDay());
+    }
+
+    private boolean isExceptionDayOfMonthMatches(BatchReauthCustomException rule, LocalDateTime date) {
+        return rule.getDayOfMonth() != null &&
+               rule.getDayOfMonth().equals(date.getDayOfMonth());
+    }
+
+    // =====================================================
+    // UTILITIES
+    // =====================================================
+    private long getLongProperty(String key, long defaultValue) {
+        String value = environment.getProperty(key);
+
+        if (value == null || value.isBlank()) {
+            return defaultValue;
+        }
+
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalStateException("Invalid numeric value for property: " + key, e);
+        }
+    }
+
+    private LocalTime convertToLocalTime(long time) {
+        int hour   = (int) (time / 100);
+        int minute = (int) (time % 100);
+        return LocalTime.of(hour, minute);
+    }
+
+
 }
