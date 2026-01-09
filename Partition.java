@@ -1,29 +1,12 @@
-for (BatchRetryCustomException exceptionRule : retryCustomExceptionList) {
-		
-			if (StringUtils.isNotEmpty(exceptionRule.getIncludeError()) && StringUtils.isNotEmpty(errorCode)
-				&& exceptionRule.getIncludeError().equalsIgnoreCase(errorCode)) {
-				var base = runDate.toLocalDate();
+private LocalDate resolveDateFromRuleDay(LocalDate baseDate, String ruleDay) {
+    if (ruleDay == null || ruleDay.isBlank()) {
+        return baseDate;
+    }
 
-				var fixedRuleDate = resolveDateFromRuleDay(base, exceptionRule.getDay());
-				nextScheduleDate = LocalDateTime.of(fixedRuleDate, convertToLocalTime(exceptionRule.getTime()));
-				
-			} else if ((isExceptionDayMatches(exceptionRule, runDate)
-                    && isExceptionDayOfTheMonthMatches(exceptionRule, runDate))
-                    && !isErrorCodeMatches(exceptionRule.getExcludeError(), errorCode)) {
+    DayOfWeek targetDay = DayOfWeek.valueOf(ruleDay.toUpperCase());
 
-                nextScheduleDate =
-                        LocalDateTime.of(runDate.toLocalDate(),
-                                convertToLocalTime(exceptionRule.getTime()));
-                
-            }
-			
-			if (nextScheduleDate.isAfter(scheduleDate)) {
+    int diff = targetDay.getValue() - baseDate.getDayOfWeek().getValue();
+    if (diff < = 0) diff += 7;
 
-                    runDate = nextScheduleDate;
-
-                    LOGGER.info("Eligible run date found matching exception rule: {} for run date: {}",
-                            exceptionRule, runDate);
-
-                    return true;
-             }
-        }
+    return baseDate.plusDays(diff);
+}
