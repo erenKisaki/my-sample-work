@@ -1,1 +1,1 @@
-//a[contains(@class,'login') and contains(text(),'Investor')]
+SIGN_IN_BUTTON = By.xpath("//input[@type='submit' and @value='Sign In']");
