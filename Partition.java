@@ -1,8 +1,8 @@
-@Test
+    @Test
     public void testMondayNextRunDate() {
         LocalDateTime input = LocalDateTime.of(2026, 1, 12, 11, 00); // Monday
 
-        assertTrue(LocalDateTime.of(2026, 1, 13, 18, 00)
+        assertTrue(LocalDateTime.of(2026, 1, 13, 10, 00)
                 .equals(scheduledDateAdapter.getEligibleNextRun(input, input, 1)));
     }
 
@@ -10,7 +10,7 @@
     public void testTuesdayNextRunDate() {
         LocalDateTime input = LocalDateTime.of(2026, 1, 13, 11, 00); // Tuesday
 
-        assertTrue(LocalDateTime.of(2026, 1, 14, 10, 00)
+        assertTrue(LocalDateTime.of(2026, 1, 14, 18, 00)
                 .equals(scheduledDateAdapter.getEligibleNextRun(input, input, 2)));
     }
 
@@ -18,7 +18,7 @@
     public void testWednesdayNextRunDate() {
         LocalDateTime input = LocalDateTime.of(2026, 1, 14, 11, 00); // Wednesday
 
-        assertTrue(LocalDateTime.of(2026, 1, 15, 18, 00)
+        assertTrue(LocalDateTime.of(2026, 1, 15, 10, 00)
                 .equals(scheduledDateAdapter.getEligibleNextRun(input, input, 3)));
     }
 
@@ -26,7 +26,7 @@
     public void testThursdayNextRunDate() {
         LocalDateTime input = LocalDateTime.of(2026, 1, 15, 11, 00); // Thursday
 
-        assertTrue(LocalDateTime.of(2026, 1, 16, 10, 00)
+        assertTrue(LocalDateTime.of(2026, 1, 16, 18, 00)
                 .equals(scheduledDateAdapter.getEligibleNextRun(input, input, 4)));
     }
 
@@ -34,7 +34,7 @@
     public void testFridayNextRunDateSkipsWeekend() {
         LocalDateTime input = LocalDateTime.of(2026, 1, 16, 11, 00); // Friday
 
-        assertTrue(LocalDateTime.of(2026, 1, 19, 18, 00)
+        assertTrue(LocalDateTime.of(2026, 1, 19, 10, 00)
                 .equals(scheduledDateAdapter.getEligibleNextRun(input, input, 5)));
     }
 
@@ -42,7 +42,7 @@
     public void testSaturdayNextRunDateSkipsToMonday() {
         LocalDateTime input = LocalDateTime.of(2026, 1, 17, 11, 00); // Saturday
 
-        assertTrue(LocalDateTime.of(2026, 1, 19, 10, 00)
+        assertTrue(LocalDateTime.of(2026, 1, 19, 18, 00)
                 .equals(scheduledDateAdapter.getEligibleNextRun(input, input, 6)));
     }
 
@@ -50,6 +50,6 @@
     public void testSundayNextRunDateSkipsToMonday() {
         LocalDateTime input = LocalDateTime.of(2026, 1, 18, 11, 00); // Sunday
 
-        assertTrue(LocalDateTime.of(2026, 1, 19, 18, 00)
+        assertTrue(LocalDateTime.of(2026, 1, 19, 10, 00)
                 .equals(scheduledDateAdapter.getEligibleNextRun(input, input, 7)));
     }
