@@ -1,66 +1,55 @@
 @Test
-    @DisplayName("When runDate is null and requestCount is odd -> return same scheduled date with odd time")
-    void testRunDateNullAndOddCount() {
+    public void testMondayNextRunDate() {
+        LocalDateTime input = LocalDateTime.of(2026, 1, 12, 11, 00); // Monday
 
-        LocalDateTime scheduledDate = LocalDateTime.of(2026, 1, 12, 9, 0); // Monday
-        long requestCount = 1; // odd
-
-        LocalDateTime result =
-                paymentService.getNextRun(null, scheduledDate, requestCount);
-
-        LocalDateTime expected =
-                LocalDateTime.of(LocalDate.of(2026, 1, 12), LocalTime.of(11, 0));
-
-        assertEquals(expected, result);
+        assertTrue(LocalDateTime.of(2026, 1, 13, 18, 00)
+                .equals(scheduledDateAdapter.getEligibleNextRun(input, input, 1)));
     }
 
     @Test
-    @DisplayName("When runDate is null and requestCount is even -> return same scheduled date with even time")
-    void testRunDateNullAndEvenCount() {
+    public void testTuesdayNextRunDate() {
+        LocalDateTime input = LocalDateTime.of(2026, 1, 13, 11, 00); // Tuesday
 
-        LocalDateTime scheduledDate = LocalDateTime.of(2026, 1, 12, 9, 0);
-        long requestCount = 2; // even
-		
-        LocalDateTime result =
-                paymentService.getNextRun(null, scheduledDate, requestCount);
-
-        LocalDateTime expected =
-                LocalDateTime.of(LocalDate.of(2026, 1, 12), LocalTime.of(14, 0));
-
-        assertEquals(expected, result);
+        assertTrue(LocalDateTime.of(2026, 1, 14, 10, 00)
+                .equals(scheduledDateAdapter.getEligibleNextRun(input, input, 2)));
     }
 
     @Test
-    @DisplayName("When runDate exists and next day is weekday -> return next business day")
-    void testNextBusinessDayWeekday() {
+    public void testWednesdayNextRunDate() {
+        LocalDateTime input = LocalDateTime.of(2026, 1, 14, 11, 00); // Wednesday
 
-        LocalDateTime runDate = LocalDateTime.of(2026, 1, 12, 10, 0); // Monday
-        LocalDateTime scheduledDate = LocalDateTime.of(2026, 1, 12, 10, 0);
-        long requestCount = 1;
-
-
-        LocalDateTime result =
-                paymentService.getNextRun(runDate, scheduledDate, requestCount);
-
-        LocalDateTime expected =
-                LocalDateTime.of(LocalDate.of(2026, 1, 13), LocalTime.of(9, 0));
-
-        assertEquals(expected, result);
+        assertTrue(LocalDateTime.of(2026, 1, 15, 18, 00)
+                .equals(scheduledDateAdapter.getEligibleNextRun(input, input, 3)));
     }
 
     @Test
-    @DisplayName("When next day is Saturday -> skip to Monday")
-    void testWeekendSkipFromFriday() {
+    public void testThursdayNextRunDate() {
+        LocalDateTime input = LocalDateTime.of(2026, 1, 15, 11, 00); // Thursday
 
-        LocalDateTime runDate = LocalDateTime.of(2026, 1, 9, 10, 0); // Friday
-        LocalDateTime scheduledDate = LocalDateTime.of(2026, 1, 9, 10, 0);
-        long requestCount = 2;
+        assertTrue(LocalDateTime.of(2026, 1, 16, 10, 00)
+                .equals(scheduledDateAdapter.getEligibleNextRun(input, input, 4)));
+    }
 
-        LocalDateTime result =
-                paymentService.getNextRun(runDate, scheduledDate, requestCount);
+    @Test
+    public void testFridayNextRunDateSkipsWeekend() {
+        LocalDateTime input = LocalDateTime.of(2026, 1, 16, 11, 00); // Friday
 
-        LocalDateTime expected =
-                LocalDateTime.of(LocalDate.of(2026, 1, 12), LocalTime.of(15, 0)); // Monday
+        assertTrue(LocalDateTime.of(2026, 1, 19, 18, 00)
+                .equals(scheduledDateAdapter.getEligibleNextRun(input, input, 5)));
+    }
 
-        assertEquals(expected, result);
+    @Test
+    public void testSaturdayNextRunDateSkipsToMonday() {
+        LocalDateTime input = LocalDateTime.of(2026, 1, 17, 11, 00); // Saturday
+
+        assertTrue(LocalDateTime.of(2026, 1, 19, 10, 00)
+                .equals(scheduledDateAdapter.getEligibleNextRun(input, input, 6)));
+    }
+
+    @Test
+    public void testSundayNextRunDateSkipsToMonday() {
+        LocalDateTime input = LocalDateTime.of(2026, 1, 18, 11, 00); // Sunday
+
+        assertTrue(LocalDateTime.of(2026, 1, 19, 18, 00)
+                .equals(scheduledDateAdapter.getEligibleNextRun(input, input, 7)));
     }
