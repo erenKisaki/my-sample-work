@@ -1,64 +1,66 @@
-@ExtendWith(MockitoExtension.class)
-class BatchReauthCustomExceptionDaoImplTest {
+@Test
+    @DisplayName("When runDate is null and requestCount is odd -> return same scheduled date with odd time")
+    void testRunDateNullAndOddCount() {
 
-    @InjectMocks
-    private BatchReauthCustomExceptionDaoImpl dao;
+        LocalDateTime scheduledDate = LocalDateTime.of(2026, 1, 12, 9, 0); // Monday
+        long requestCount = 1; // odd
 
-    @Mock
-    private PaymentDatabaseConnector paymentDatabaseConnector;
+        LocalDateTime result =
+                paymentService.getNextRun(null, scheduledDate, requestCount);
 
-    @Mock
-    private JdbcTemplate jdbcTemplate;
+        LocalDateTime expected =
+                LocalDateTime.of(LocalDate.of(2026, 1, 12), LocalTime.of(11, 0));
 
-    @Mock
-    private QueryBuilder<BatchReauthCustomException> queryBuilder;
-
-    @BeforeEach
-    void setup() {
-        when(paymentDatabaseConnector.getJdbcTemplate()).thenReturn(jdbcTemplate);
+        assertEquals(expected, result);
     }
 
     @Test
-    void get_ShouldReturnList_WhenDataExists() {
-        BatchReauthCustomException record = new BatchReauthCustomException();
-        List<BatchReauthCustomException> expectedList = List.of(record);
+    @DisplayName("When runDate is null and requestCount is even -> return same scheduled date with even time")
+    void testRunDateNullAndEvenCount() {
 
-        when(jdbcTemplate.query(anyString(), any(ResultSetExtractor.class)))
-                .thenReturn(expectedList);
+        LocalDateTime scheduledDate = LocalDateTime.of(2026, 1, 12, 9, 0);
+        long requestCount = 2; // even
+		
+        LocalDateTime result =
+                paymentService.getNextRun(null, scheduledDate, requestCount);
 
-        List<BatchReauthCustomException> result = dao.get();
+        LocalDateTime expected =
+                LocalDateTime.of(LocalDate.of(2026, 1, 12), LocalTime.of(14, 0));
 
-        assertNotNull(result);
-        assertEquals(1, result.size());
+        assertEquals(expected, result);
     }
 
     @Test
-    void get_ShouldReturnNull_WhenEmptyList() {
-        when(jdbcTemplate.query(anyString(), any(ResultSetExtractor.class)))
-                .thenReturn(Collections.emptyList());
+    @DisplayName("When runDate exists and next day is weekday -> return next business day")
+    void testNextBusinessDayWeekday() {
 
-        List<BatchReauthCustomException> result = dao.get();
+        LocalDateTime runDate = LocalDateTime.of(2026, 1, 12, 10, 0); // Monday
+        LocalDateTime scheduledDate = LocalDateTime.of(2026, 1, 12, 10, 0);
+        long requestCount = 1;
 
-        assertNull(result);
+
+        LocalDateTime result =
+                paymentService.getNextRun(runDate, scheduledDate, requestCount);
+
+        LocalDateTime expected =
+                LocalDateTime.of(LocalDate.of(2026, 1, 13), LocalTime.of(9, 0));
+
+        assertEquals(expected, result);
     }
 
     @Test
-    void getExtractor_ShouldMapResultSetCorrectly() throws Exception {
-        ResultSet rs = mock(ResultSet.class);
+    @DisplayName("When next day is Saturday -> skip to Monday")
+    void testWeekendSkipFromFriday() {
 
-        when(rs.next()).thenReturn(true, false);
-        when(rs.getString("DAY")).thenReturn("MONDAY");
-        when(rs.getString("EXCLUDE_ERROR")).thenReturn("ERR01");
-        when(rs.getInt("DAY_OF_THE_MONTH")).thenReturn(10);
-        when(rs.getString("INCLUDE_ERROR")).thenReturn("ERR02");
-        when(rs.getLong("TIME")).thenReturn(1000L);
-        when(rs.getInt("REAUTH_RULE")).thenReturn(1);
+        LocalDateTime runDate = LocalDateTime.of(2026, 1, 9, 10, 0); // Friday
+        LocalDateTime scheduledDate = LocalDateTime.of(2026, 1, 9, 10, 0);
+        long requestCount = 2;
 
-        ResultSetExtractor<List<BatchReauthCustomException>> extractor = dao.getExtractor();
+        LocalDateTime result =
+                paymentService.getNextRun(runDate, scheduledDate, requestCount);
 
-        List<BatchReauthCustomException> result = extractor.extractData(rs);
+        LocalDateTime expected =
+                LocalDateTime.of(LocalDate.of(2026, 1, 12), LocalTime.of(15, 0)); // Monday
 
-        assertEquals(1, result.size());
-        assertEquals("MONDAY", result.get(0).getDay());
+        assertEquals(expected, result);
     }
-}
