@@ -1,4 +1,4 @@
-    @Test
+@Test
     public void testMondayNextRunDate() {
         LocalDateTime input = LocalDateTime.of(2026, 1, 12, 11, 00); // Monday
 
