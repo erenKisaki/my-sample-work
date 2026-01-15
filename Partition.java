@@ -1,29 +1,24 @@
 @Test
 public void testNextRunForAllDays_EvenTimeOnly() {
 
-    LocalDateTime[] inputs = {
-            LocalDateTime.of(2026, 1, 12, 9, 0), // Monday
-            LocalDateTime.of(2026, 1, 13, 9, 0), // Tuesday
-            LocalDateTime.of(2026, 1, 14, 9, 0), // Wednesday
-            LocalDateTime.of(2026, 1, 15, 9, 0), // Thursday
-            LocalDateTime.of(2026, 1, 16, 9, 0), // Friday
-            LocalDateTime.of(2026, 1, 17, 9, 0), // Saturday
-            LocalDateTime.of(2026, 1, 18, 9, 0)  // Sunday
-    };
+    assertTrue(LocalDateTime.of(2026, 1, 13, 18, 0)
+            .equals(scheduleDateAdapter.getNextRun(LocalDateTime.of(2026, 1, 12, 10, 0), 2))); // Mon → Tue
 
-    LocalDateTime[] expectedResults = {
-            LocalDateTime.of(2026, 1, 13, 18, 0), // Mon → Tue
-            LocalDateTime.of(2026, 1, 14, 18, 0), // Tue → Wed
-            LocalDateTime.of(2026, 1, 15, 18, 0), // Wed → Thu
-            LocalDateTime.of(2026, 1, 16, 18, 0), // Thu → Fri
-            LocalDateTime.of(2026, 1, 19, 18, 0), // Fri → Mon
-            LocalDateTime.of(2026, 1, 19, 18, 0), // Sat → Mon
-            LocalDateTime.of(2026, 1, 19, 18, 0)  // Sun → Mon
-    };
+    assertTrue(LocalDateTime.of(2026, 1, 14, 18, 0)
+            .equals(scheduleDateAdapter.getNextRun(LocalDateTime.of(2026, 1, 13, 10, 0), 2))); // Tue → Wed
 
-    for (int i = 0; i < inputs.length; i++) {
-        LocalDateTime actual = scheduledDateAdapter.getNextRun(inputs[i], 2);
+    assertTrue(LocalDateTime.of(2026, 1, 15, 18, 0)
+            .equals(scheduleDateAdapter.getNextRun(LocalDateTime.of(2026, 1, 14, 10, 0), 2))); // Wed → Thu
 
-        assertTrue(expectedResults[i].equals(actual));
-    }
+    assertTrue(LocalDateTime.of(2026, 1, 16, 18, 0)
+            .equals(scheduleDateAdapter.getNextRun(LocalDateTime.of(2026, 1, 15, 10, 0), 2))); // Thu → Fri
+
+    assertTrue(LocalDateTime.of(2026, 1, 19, 18, 0)
+            .equals(scheduleDateAdapter.getNextRun(LocalDateTime.of(2026, 1, 16, 10, 0), 2))); // Fri → Mon
+
+    assertTrue(LocalDateTime.of(2026, 1, 19, 18, 0)
+            .equals(scheduleDateAdapter.getNextRun(LocalDateTime.of(2026, 1, 17, 10, 0), 2))); // Sat → Mon
+
+    assertTrue(LocalDateTime.of(2026, 1, 19, 18, 0)
+            .equals(scheduleDateAdapter.getNextRun(LocalDateTime.of(2026, 1, 18, 10, 0), 2))); // Sun → Mon
 }
