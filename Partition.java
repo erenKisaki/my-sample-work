@@ -1,10 +1,6 @@
 List<BatchReauthCustomException> exceptionList =
             BatchPaymentWorkListUtil.getBatchReauthCustomExceptionList();
 
-    if (exceptionList == null || exceptionList.isEmpty()) {
-        return true; // no exceptions → eligible
-    }
-
     exceptionList = exceptionList.stream()
             .sorted(Comparator.comparingLong(BatchReauthCustomException::getTime))
             .collect(Collectors.toList());
