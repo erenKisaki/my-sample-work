@@ -1,9 +1,13 @@
-BatchReauthCustomException rule1 = new BatchReauthCustomException();
-rule1.setReAuthRule(5L);
-BatchReauthCustomException rule2 = new BatchReauthCustomException();
-rule2.setReAuthRule(5L);
+//input[@id='main_UID']
 
-Arrays.asList(
-        rule1,
-        rule2
-    );
+//input[@id='main_PWD']
+
+//input[@id='main_btnSubmit']
+
+//input[@id='main_ckbRemMe']
+
+//a[@id='main_lnkForgotUserName']
+
+//a[@id='main_lnkForgotPassword']
+
+//a[@id='main_lnkSignUp']        // Register Now
