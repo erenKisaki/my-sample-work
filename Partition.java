@@ -1,45 +1,4 @@
 when(jdbcTemplate.update(
         anyString(),
-        ArgumentMatchers.any(SqlParameterValue.class), // 1
-        ArgumentMatchers.any(SqlParameterValue.class), // 2
-        ArgumentMatchers.any(SqlParameterValue.class), // 3
-        ArgumentMatchers.any(SqlParameterValue.class), // 4
-        ArgumentMatchers.any(SqlParameterValue.class), // 5
-        ArgumentMatchers.any(SqlParameterValue.class), // 6
-        ArgumentMatchers.any(SqlParameterValue.class), // 7
-        ArgumentMatchers.any(SqlParameterValue.class), // 8
-        ArgumentMatchers.any(SqlParameterValue.class), // 9
-        ArgumentMatchers.any(SqlParameterValue.class), // 10
-        ArgumentMatchers.any(SqlParameterValue.class), // 11
-        ArgumentMatchers.any(SqlParameterValue.class), // 12
-        ArgumentMatchers.any(SqlParameterValue.class), // 13
-        ArgumentMatchers.any(SqlParameterValue.class), // 14
-        ArgumentMatchers.any(SqlParameterValue.class), // 15
-        ArgumentMatchers.any(SqlParameterValue.class), // 16
-        ArgumentMatchers.any(SqlParameterValue.class), // 17
-        ArgumentMatchers.any(SqlParameterValue.class), // 18
-        ArgumentMatchers.any(SqlParameterValue.class), // 19
-        ArgumentMatchers.any(SqlParameterValue.class), // 20
-        ArgumentMatchers.any(SqlParameterValue.class), // 21
-        ArgumentMatchers.any(SqlParameterValue.class), // 22
-        ArgumentMatchers.any(SqlParameterValue.class), // 23
-        ArgumentMatchers.any(SqlParameterValue.class), // 24
-        ArgumentMatchers.any(SqlParameterValue.class), // 25
-        ArgumentMatchers.any(SqlParameterValue.class), // 26
-        ArgumentMatchers.any(SqlParameterValue.class), // 27
-        ArgumentMatchers.any(SqlParameterValue.class), // 28
-        ArgumentMatchers.any(SqlParameterValue.class), // 29
-        ArgumentMatchers.any(SqlParameterValue.class), // 30
-        ArgumentMatchers.any(SqlParameterValue.class), // 31
-        ArgumentMatchers.any(SqlParameterValue.class), // 32
-        ArgumentMatchers.any(SqlParameterValue.class), // 33
-        ArgumentMatchers.any(SqlParameterValue.class), // 34
-        ArgumentMatchers.any(SqlParameterValue.class), // 35
-        ArgumentMatchers.any(SqlParameterValue.class), // 36
-        ArgumentMatchers.any(SqlParameterValue.class), // 37
-        ArgumentMatchers.any(SqlParameterValue.class), // 38
-        ArgumentMatchers.any(SqlParameterValue.class), // 39
-        ArgumentMatchers.any(SqlParameterValue.class), // 40
-        ArgumentMatchers.any(SqlParameterValue.class), // 41
-        ArgumentMatchers.any(SqlParameterValue.class)  // 42
+        ArgumentMatchers.<Object[]>any()
 )).thenReturn(1);
