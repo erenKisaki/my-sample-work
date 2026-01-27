@@ -1,36 +1,27 @@
+@Test
+public void testGetEnhancedBillingInfo_NullBillingIdWithTokenRegexMatches() {
 
-		
-private BillingInfo validateTokenConfiguration(BillingInfo billingInfo) {
+    BillingInfo billingInfo = new BillingInfo(BILLING_ARRANGEMENT_ID_18, "11111");
+    AuditCollectorRO.get()
+            .getPaymentServiceTransactions().setToken("1234567890123456789")
 
-    var tokenRegex =
-            configuration.getString("token.configuration.regex");
+    when(configuration.getString("token.configuration.regex"))
+            .thenReturn("^\\d{19}$");
+			
+	when(configuration.getString("xbuck.markets.enabled"))
+            .thenReturn(List.of("11111");
 
-    String token = AuditCollectorRO.get()
+    AuditCollectorRO.get()
             .getPaymentServiceTransactions()
-            .getToken();
+            .setToken("1234567893456789012");
 
-    if (StringUtils.isNotBlank(tokenRegex)
-            && StringUtils.isNotBlank(token)
-            && token.matches(tokenRegex)) {
+    BillingInfo updateBillingInfo =
+            underTest.getEnhancedBillingInfo(billingInfo, CHANNEL);
 
-    //return createEnhancedBillingInfo(billingInfo.getBillingArrangementId(), billingInfo); // Remove this line and add the below code in this method
-		if (StringUtils.isNotBlank(billingInfo.getMarket())) {
+    assertNotNull(updateBillingInfo.getBillingArrangementId());
+    assertNotNull(updateBillingInfo.getInputBillingArrangementId());
+    assertEquals(billingInfo.getMarket(), updateBillingInfo.getMarket());
 
-            var xbuckMarkets =
-                    configuration.getStringList("xbuck.bypass.ass.enabled.markets");
-
-            if (CollectionUtils.isNotEmpty(xbuckMarkets)
-                    && StringUtils.isNotBlank(billingInfo.getMarket())
-                    && xbuckMarkets.contains(billingInfo.getMarket())) {
-
-                return createEnhancedBillingInfo(
-                        billingInfo.getBillingArrangementId(),
-                        billingInfo
-                );
-            }
-		}
-        
-    }
-
-    return null;
+    verify(configuration).getString("token.configuration.regex");
+	verify(configuration).getString("xbuck.markets.enabled");
 }
