@@ -1,62 +1,60 @@
-private BillingInfo validateTokenConfiguration(BillingInfo billingInfo) {
+private void auditPaymentSignalTransactions(EvaluateSignalResponse response) {
 
-    var tokenRegex =
-            configuration.getString("token.configuration.regex");
-
-    String token = AuditCollectorRO.get()
-            .getPaymentServiceTransactions()
-            .getToken();
-
-    if (StringUtils.isNotBlank(tokenRegex)
-            && StringUtils.isNotBlank(token)
-            && token.matches(tokenRegex)) {
-
-    //return createEnhancedBillingInfo(billingInfo.getBillingArrangementId(), billingInfo); // Remove this line and add the below code in this method
-		if (StringUtils.isNotBlank(billingInfo.getMarket())) {
-
-            var xbuckMarkets =
-                    configuration.getStringList("xbuck.bypass.ass.enabled.markets");
-
-            if (CollectionUtils.isNotEmpty(xbuckMarkets)
-                    && StringUtils.isNotBlank(billingInfo.getMarket())
-                    && xbuckMarkets.contains(billingInfo.getMarket())) {
-
-                return createEnhancedBillingInfo(
-                        billingInfo.getBillingArrangementId(),
-                        billingInfo
-                );
-            }
-		}
-        
+    if (response == null) {
+        return;
     }
 
-    return null;
+    var paymentSignalTransaction =
+            auditCollectorRO.get().getPaymentSignalTransactions();
+
+    paymentSignalTransaction.setPlaidReqId(response.getRequestId());
+
+    var scores = response.getScores();
+    if (scores != null) {
+        setCustomerInitiatedRisk(scores, paymentSignalTransaction);
+        setBankInitiatedRisk(scores, paymentSignalTransaction);
+    }
+
+    if (response.getRuleset() != null) {
+        paymentSignalTransaction
+                .setRulesetResult(response.getRuleset().getRulesetResult());
+    }
+
+    auditCollectorRO.get()
+            .setPaymentSignalTransactions(paymentSignalTransaction);
 }
 
-@Test
-public void testGetEnhancedBillingInfo_NullBillingIdWithTokenRegexMatches() {
 
-    BillingInfo billingInfo = new BillingInfo(BILLING_ARRANGEMENT_ID_18, "11111");
-    AuditCollectorRO.get()
-            .getPaymentServiceTransactions().setToken("1234567890123456789")
+private void setCustomerInitiatedRisk(Scores scores,
+                                      PaymentSignalTransaction txn) {
 
-    when(configuration.getString("token.configuration.regex"))
-            .thenReturn("^\\d{19}$");
-			
-	when(configuration.getString("xbuck.markets.enabled"))
-            .thenReturn(List.of("11111");
+    var cir = scores.getCustomerInitiatedReturnRisk();
+    if (cir == null) {
+        return;
+    }
 
-    AuditCollectorRO.get()
-            .getPaymentServiceTransactions()
-            .setToken("1234567893456789012");
+    if (cir.getRiskTier() != null) {
+        txn.setCirRiskTier(cir.getRiskTier().longValue());
+    }
 
-    BillingInfo updateBillingInfo =
-            underTest.getEnhancedBillingInfo(billingInfo, CHANNEL);
+    if (cir.getScore() != null) {
+        txn.setCirRiskScore(cir.getScore().longValue());
+    }
+}
 
-    assertNotNull(updateBillingInfo.getBillingArrangementId());
-    assertNotNull(updateBillingInfo.getInputBillingArrangementId());
-    assertEquals(billingInfo.getMarket(), updateBillingInfo.getMarket());
+private void setBankInitiatedRisk(Scores scores,
+                                  PaymentSignalTransaction txn) {
 
-    verify(configuration).getString("token.configuration.regex");
-	verify(configuration).getString("xbuck.markets.enabled");
+    var bir = scores.getBankInitiatedReturnRisk();
+    if (bir == null) {
+        return;
+    }
+
+    if (bir.getRiskTier() != null) {
+        txn.setBirRiskTier(bir.getRiskTier().longValue());
+    }
+
+    if (bir.getScore() != null) {
+        txn.setBirRiskScore(bir.getScore().longValue());
+    }
 }
