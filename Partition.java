@@ -1,58 +1,59 @@
+public void checkCustomerBlockedStatus(
+        String customerId,
+        String billingArrangementId,
+        PaymentInstrumentIdentification paymentInstrumentIdentification,
+        String lob,
+        boolean isBillingIdCheckBlockEnabled,
+        boolean isCustGuidCheckBlockEnabled) {
 
-    private void validateBankRoutingNumber(String routingNumber) {
-
-        // Original outer condition preserved
-        if (StringUtils.isNotBlank(routingNumber)) {
-            validateNumeric(routingNumber);
-            validateLength(routingNumber);
-            validateFirstTwoDigits(routingNumber);
-            validateCheckDigit(routingNumber);
-        }
+    if (paymentInstrumentIdentification == null) {
+        return;
     }
 
-    // -------------------- Helper Methods --------------------
+    switch (paymentInstrumentIdentification) {
+        case Card:
+            handleBlockedReference(
+                    getBlockedReference(customerId, billingArrangementId,
+                            PaymentServiceConstants.INSTRUMENT_TYPE_CARD,
+                            lob, isBillingIdCheckBlockEnabled, isCustGuidCheckBlockEnabled),
+                    billingArrangementId,
+                    customerId,
+                    ErrorCodes.PAYMENT_8589);
+            break;
 
-    private void validateNumeric(String routingNumber) {
-        if (!StringUtils.isNumeric(routingNumber)) {
-            throw new RequestValidationError(
-                    ErrorCodes.PAYMENT_1027.getCode());
-        }
+        case Bank:
+            handleBlockedReference(
+                    getBlockedReference(customerId, billingArrangementId,
+                            PaymentServiceConstants.INSTRUMENT_TYPE_BANK,
+                            lob, isBillingIdCheckBlockEnabled, isCustGuidCheckBlockEnabled),
+                    billingArrangementId,
+                    customerId,
+                    ErrorCodes.PAYMENT_8688);
+            break;
+
+        default:
+            LOGGER.info("Payment instrument is not Card or Bank, no block check required");
+    }
+}
+
+
+private void handleBlockedReference(
+        String blockedReference,
+        String billingArrangementId,
+        String customerId,
+        ErrorCodes errorCode) {
+
+    if (StringUtils.isBlank(blockedReference)) {
+        return;
     }
 
-    private void validateLength(String routingNumber) {
-        // bank routing number numeric, 9-digit
-        if (routingNumber.length() != 9) {
-            throw new RequestValidationError(
-                    ErrorCodes.PAYMENT_1028.getCode());
-        }
-    }
+    Map<String, Object> details = new HashMap<>();
+    boolean isBillingRef = StringUtils.equals(blockedReference, billingArrangementId);
 
-    private void validateFirstTwoDigits(String routingNumber) {
-        // routing number first two digits should be valid
-        int firstTwoDigits = Integer.parseInt(routingNumber.substring(0, 2));
+    details.put(BLOCK_REFERENCE_ID,
+            isBillingRef ? billingArrangementId : customerId);
+    details.put(BLOCK_REFERENCE_TYPE,
+            isBillingRef ? BLOCK_REF_BILLING_ARR_ID : BLOCK_REF_TYPE_CUSTOMER_ID);
 
-        if ((firstTwoDigits <= 0)
-                || (firstTwoDigits >= 6 && firstTwoDigits <= 12)
-                || (firstTwoDigits >= 21 && firstTwoDigits <= 32)
-                || (firstTwoDigits >= 61 && firstTwoDigits <= 72)) {
-
-            throw new RequestValidationError(
-                    ErrorCodes.PAYMENT_1250.getCode());
-        }
-    }
-
-    private void validateCheckDigit(String routingNumber) {
-        // Routing number check digit validation
-        int checkValue = 0;
-
-        for (int index = 0; index < 3; index++) {
-            checkValue += Character.getNumericValue(routingNumber.charAt(index * 3)) * 3;
-            checkValue += Character.getNumericValue(routingNumber.charAt(index * 3 + 1)) * 7;
-            checkValue += Character.getNumericValue(routingNumber.charAt(index * 3 + 2));
-        }
-
-        if (checkValue == 0 || checkValue % 10 != 0) {
-            throw new RequestValidationError(
-                    ErrorCodes.PAYMENT_1251.getCode());
-        }
-    }
+    throw new BusinessValidationError(errorCode.getCode(), details);
+}
