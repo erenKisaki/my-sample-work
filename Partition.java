@@ -1,59 +1,140 @@
-public void checkCustomerBlockedStatus(
-        String customerId,
-        String billingArrangementId,
-        PaymentInstrumentIdentification paymentInstrumentIdentification,
-        String lob,
-        boolean isBillingIdCheckBlockEnabled,
-        boolean isCustGuidCheckBlockEnabled) {
+    // =====================================================
+    // ORIGINAL METHOD (Sonar fixed, logic untouched)
+    // =====================================================
+    private void updateServiceAndGatewayTransaction(
+            PaymentServiceTransactions paymentServiceTransactions,
+            TransactionSearchResponse transactionSearchResponse,
+            PaymentGatewayTransactions paymentGatewayTransactions) {
 
-    if (paymentInstrumentIdentification == null) {
-        return;
+        String confirmationNumber =
+                confirmationNumberDao.getConfirmationNumber();
+
+        paymentServiceTransactions
+                .setPaymentConfirmationNumber(
+                        Long.parseLong(confirmationNumber));
+
+        PaymentSearchTransaction paymentSearchTransaction = null;
+        ProcessingData processingData = null;
+
+        for (SearchTransaction searchTransaction
+                : transactionSearchResponse.getSearchTransactions()) {
+
+            if (StringUtils.equalsIgnoreCase(
+                    TransactionType.BANK_PAYMENT,
+                    searchTransaction.getTransactionType())) {
+
+                paymentSearchTransaction = searchTransaction;
+                processingData = searchTransaction.getDebitData();
+
+            } else if (StringUtils.equalsIgnoreCase(
+                    TransactionType.AUTH_CAPTURE,
+                    searchTransaction.getTransactionType())) {
+
+                paymentSearchTransaction = searchTransaction;
+                processingData = searchTransaction.getCaptureData();
+            }
+        }
+
+        populateFromSearchTransaction(
+                paymentSearchTransaction,
+                paymentServiceTransactions,
+                paymentGatewayTransactions);
+
+        populateFromProcessingData(
+                processingData,
+                paymentServiceTransactions,
+                paymentGatewayTransactions);
     }
 
-    switch (paymentInstrumentIdentification) {
-        case Card:
-            handleBlockedReference(
-                    getBlockedReference(customerId, billingArrangementId,
-                            PaymentServiceConstants.INSTRUMENT_TYPE_CARD,
-                            lob, isBillingIdCheckBlockEnabled, isCustGuidCheckBlockEnabled),
-                    billingArrangementId,
-                    customerId,
-                    ErrorCodes.PAYMENT_8589);
-            break;
+    // =====================================================
+    // SEARCH TRANSACTION HANDLING (extracted, same logic)
+    // =====================================================
+    private void populateFromSearchTransaction(
+            PaymentSearchTransaction paymentSearchTransaction,
+            PaymentServiceTransactions paymentServiceTransactions,
+            PaymentGatewayTransactions paymentGatewayTransactions) {
 
-        case Bank:
-            handleBlockedReference(
-                    getBlockedReference(customerId, billingArrangementId,
-                            PaymentServiceConstants.INSTRUMENT_TYPE_BANK,
-                            lob, isBillingIdCheckBlockEnabled, isCustGuidCheckBlockEnabled),
-                    billingArrangementId,
-                    customerId,
-                    ErrorCodes.PAYMENT_8688);
-            break;
+        if (paymentSearchTransaction == null) {
+            return;
+        }
 
-        default:
-            LOGGER.info("Payment instrument is not Card or Bank, no block check required");
-    }
-}
+        paymentServiceTransactions
+                .setRequestId(
+                        paymentSearchTransaction.getPcRequestId());
 
+        paymentGatewayTransactions
+                .setTransactionId(
+                        paymentSearchTransaction.getTransactionId());
 
-private void handleBlockedReference(
-        String blockedReference,
-        String billingArrangementId,
-        String customerId,
-        ErrorCodes errorCode) {
+        if (StringUtils.isNotBlank(
+                paymentSearchTransaction.getPcResponseId())) {
 
-    if (StringUtils.isBlank(blockedReference)) {
-        return;
+            paymentGatewayTransactions
+                    .setPcResponseId(
+                            paymentSearchTransaction.getPcResponseId());
+        }
+
+        populateProcessorInformation(
+                paymentSearchTransaction,
+                paymentGatewayTransactions);
     }
 
-    Map<String, Object> details = new HashMap<>();
-    boolean isBillingRef = StringUtils.equals(blockedReference, billingArrangementId);
+    // =====================================================
+    // PROCESSOR INFO (unchanged logic)
+    // =====================================================
+    private void populateProcessorInformation(
+            PaymentSearchTransaction paymentSearchTransaction,
+            PaymentGatewayTransactions paymentGatewayTransactions) {
 
-    details.put(BLOCK_REFERENCE_ID,
-            isBillingRef ? billingArrangementId : customerId);
-    details.put(BLOCK_REFERENCE_TYPE,
-            isBillingRef ? BLOCK_REF_BILLING_ARR_ID : BLOCK_REF_TYPE_CUSTOMER_ID);
+        if (paymentSearchTransaction.getProcessorInformation() == null) {
+            return;
+        }
 
-    throw new BusinessValidationError(errorCode.getCode(), details);
-}
+        ProcessorInformation processorInfo =
+                paymentSearchTransaction.getProcessorInformation();
+
+        paymentGatewayTransactions
+                .setAuthorizationCode(
+                        processorInfo.getApprovalCode());
+
+        if (StringUtils.isNotBlank(
+                processorInfo.getProcessorResponseCode())) {
+
+            paymentGatewayTransactions
+                    .setChasePTechResponseCode(
+                            processorInfo.getProcessorResponseCode());
+        }
+
+        if (StringUtils.isNotBlank(processorInfo.getAvsCode())) {
+            paymentGatewayTransactions
+                    .setAvsCode(
+                            processorInfo.getAvsCode().charAt(0));
+        }
+
+        if (StringUtils.isNotBlank(processorInfo.getCvvCode())) {
+            paymentGatewayTransactions
+                    .setCvvCode(
+                            processorInfo.getCvvCode().charAt(0));
+        }
+    }
+
+    // =====================================================
+    // PROCESSING DATA HANDLING (unchanged logic)
+    // =====================================================
+    private void populateFromProcessingData(
+            ProcessingData processingData,
+            PaymentServiceTransactions paymentServiceTransactions,
+            PaymentGatewayTransactions paymentGatewayTransactions) {
+
+        if (processingData == null) {
+            return;
+        }
+
+        paymentServiceTransactions
+                .setPaymentReconciliationId(
+                        processingData.getReconciliationId());
+
+        paymentGatewayTransactions
+                .setReconciliationId(
+                        processingData.getReconciliationId());
+    }
