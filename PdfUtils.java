@@ -1,47 +1,67 @@
-public boolean reverseAuthorization(
-        String paymentTransactionId,
-        boolean autoRetry,
-        GatewayPaymentRequest gatewayPaymentRequest) {
+public class AmountValidator {
 
-    int retryCount = paymentPropertiesDao.getPositiveIntProperty(
-            GatewayConstants.PMT_GTW_REVERSAL_RETRY_COUNT,
-            GatewayConstants.PMT_GTW_REVERSAL_RETRY_COUNT_DEFAULT);
+    private ViewBillSummary validateMinimumAmount(
+            String channel,
+            AllowablePaymentType pmtType,
+            BigDecimal inputAmount,
+            BillingInfo billingInfo) {
 
-    long retryWaitTime = paymentPropertiesDao.getPositiveLongProperty(
-            GatewayConstants.PMT_GTW_REVERSAL_RETRY_WAIT_TIME,
-            GatewayConstants.PMT_GTW_REVERSAL_RETRY_WAIT_TIME_DEFAULT);
+        BigDecimal minAmount = pmtType.getMinPayment();
+        ViewBillSummary viewBillSummary = null;
 
-    for (int attempt = 0; attempt <= retryCount; attempt++) {
-
-        ReverseAuthResults results =
-                pmService.reverseAuthorization(paymentTransactionId, gatewayPaymentRequest);
-
-        if (results.isReverseSuccess()) {
-            auditRequired(gatewayPaymentRequest, true, results);
-            return true;
+        if (inputAmount.compareTo(minAmount) < 0
+                || Objects.isNull(billingInfo)
+                || StringUtils.isBlank(billingInfo.getBillingArrangementId())) {
+            return null;
         }
 
-        if (!results.isAuthMissing()) {
-            auditRequired(gatewayPaymentRequest, false, results);
-            return false;
-        }
+        validateMarketRule(channel);
 
-        if (!autoRetry || attempt == retryCount) {
-            auditRequired(gatewayPaymentRequest, false, results);
-            return false;
-        }
+        viewBillSummary =
+                getViewBillSummary(billingInfo.getBillingArrangementId());
 
-        sleepSafely(retryWaitTime);
+        BigDecimal statementBalance = getAmount(viewBillSummary.getStatementBalance());
+        BigDecimal balanceDue = getAmount(viewBillSummary.getBalanceDue());
+
+        validateBalances(inputAmount, minAmount, statementBalance, balanceDue);
+        return viewBillSummary;
     }
 
-    return false;
-}
-private void sleepSafely(long waitTime) {
-    try {
-        Thread.sleep(waitTime);
-    } catch (InterruptedException e) {
-        LOGGER.error("Interrupted during retry wait", e);
-        Thread.currentThread().interrupt();
+    private void validateMarketRule(String channel) {
+        var marketRule =
+                marketLevelRuleDao.getMarket(channel, false);
+
+        if (Objects.isNull(marketRule)
+                || marketRule.isMinimumAmountValidationEnabled()) {
+            commonError(null, ErrorCodes.PAYMENT_1017.getCode(), null);
+        }
+    }
+
+    private void validateBalances(
+            BigDecimal inputAmount,
+            BigDecimal minAmount,
+            BigDecimal statementBalance,
+            BigDecimal balanceDue) {
+
+        if (balanceDue.compareTo(minAmount) > 0
+                && statementBalance.compareTo(minAmount) < 0) {
+            commonError(inputAmount, ErrorCodes.PAYMENT_1017.getCode(), null);
+        }
+
+        if (balanceDue.compareTo(BigDecimal.ZERO) <= 0
+                && statementBalance.compareTo(BigDecimal.ZERO) <= 0) {
+            commonError(inputAmount, ErrorCodes.PAYMENT_3024.getCode(), null);
+        }
+
+        if (balanceDue.compareTo(inputAmount) < 0
+                && inputAmount.compareTo(minAmount) < 0) {
+            commonError(inputAmount, ErrorCodes.PAYMENT_1017.getCode(), null);
+        }
+    }
+
+    private BigDecimal getAmount(String value) {
+        return StringUtils.isNotBlank(value)
+                ? new BigDecimal(value)
+                : BigDecimal.ZERO;
     }
 }
-
