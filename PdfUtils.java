@@ -1,63 +1,47 @@
-@ExtendWith(MockitoExtension.class)
-class PaymentProcessingHistoryDaoImplTest {
+public boolean reverseAuthorization(
+        String paymentTransactionId,
+        boolean autoRetry,
+        GatewayPaymentRequest gatewayPaymentRequest) {
 
-    @InjectMocks
-    private PaymentProcessingHistoryDaoImpl dao;
+    int retryCount = paymentPropertiesDao.getPositiveIntProperty(
+            GatewayConstants.PMT_GTW_REVERSAL_RETRY_COUNT,
+            GatewayConstants.PMT_GTW_REVERSAL_RETRY_COUNT_DEFAULT);
 
-    @Mock
-    private PaymentDatabaseConnector paymentDatabaseConnector;
+    long retryWaitTime = paymentPropertiesDao.getPositiveLongProperty(
+            GatewayConstants.PMT_GTW_REVERSAL_RETRY_WAIT_TIME,
+            GatewayConstants.PMT_GTW_REVERSAL_RETRY_WAIT_TIME_DEFAULT);
 
-    @Mock
-    private JdbcTemplate jdbcTemplate;
+    for (int attempt = 0; attempt <= retryCount; attempt++) {
 
-    @BeforeEach
-    void setup() {
-        when(paymentDatabaseConnector.getJdbcTemplate()).thenReturn(jdbcTemplate);
+        ReverseAuthResults results =
+                pmService.reverseAuthorization(paymentTransactionId, gatewayPaymentRequest);
+
+        if (results.isReverseSuccess()) {
+            auditRequired(gatewayPaymentRequest, true, results);
+            return true;
+        }
+
+        if (!results.isAuthMissing()) {
+            auditRequired(gatewayPaymentRequest, false, results);
+            return false;
+        }
+
+        if (!autoRetry || attempt == retryCount) {
+            auditRequired(gatewayPaymentRequest, false, results);
+            return false;
+        }
+
+        sleepSafely(retryWaitTime);
     }
 
-    @Test
-    void add_ShouldInsertSuccessfully() {
-        PaymentProcessingHistory history = new PaymentProcessingHistory();
-
-        PaymentProcessingHistoryDaoImpl spyDao = spy(dao);
-        doReturn(100L).when(spyDao).getNextSeqNumber(anyString());
-        doReturn(1).when(jdbcTemplate).update(anyString(), any());
-
-        Long result = spyDao.add(history);
-
-        assertNotNull(result);
-        assertEquals(100L, result);
-    }
-
-    @Test
-    void add_ShouldThrowException_WhenSequenceNull() {
-        PaymentProcessingHistory history = new PaymentProcessingHistory();
-
-        PaymentProcessingHistoryDaoImpl spyDao = spy(dao);
-        doReturn(null).when(spyDao).getNextSeqNumber(anyString());
-
-        assertThrows(RuntimeException.class, () -> spyDao.add(history));
-    }
-
-    @Test
-    void insert_ShouldReturnSequence_WhenInsertSuccess() {
-        PaymentProcessingHistory history = new PaymentProcessingHistory();
-
-        when(jdbcTemplate.update(anyString(), any())).thenReturn(1);
-
-        Long result = dao.insert(history, 10L);
-
-        assertEquals(10L, result);
-    }
-
-    @Test
-    void insert_ShouldReturnNull_WhenInsertFails() {
-        PaymentProcessingHistory history = new PaymentProcessingHistory();
-
-        when(jdbcTemplate.update(anyString(), any())).thenReturn(0);
-
-        Long result = dao.insert(history, 10L);
-
-        assertNull(result);
+    return false;
+}
+private void sleepSafely(long waitTime) {
+    try {
+        Thread.sleep(waitTime);
+    } catch (InterruptedException e) {
+        LOGGER.error("Interrupted during retry wait", e);
+        Thread.currentThread().interrupt();
     }
 }
+
