@@ -1,91 +1,96 @@
-public Level2And3ProcessTransaction createLevelProcessTransactionObject(
-        LevelAuditTxn levelAuditTxn, String downgradeReason) {
+public Optional<LevelProcessingData> getLevelProcessingData(
+        LevelProcessingRequest levelProcessingRequest) {
 
-    Level2And3ProcessTransaction processTxn = new Level2And3ProcessTransaction();
-    AuditCollectorRO auditCollectorRO =
-            new AuditCollectorRO(getGatewayTxn());
+    Optional<LevelProcessingData> levelProcessingOptionalData = Optional.empty();
 
-    processTxn.setApiName(levelAuditTxn.getApiName());
+    var levelEligibility =
+            levelEligibilityAdapter.getLevelEligibility(levelProcessingRequest);
 
-    setShippingDetails(processTxn, levelAuditTxn);
-    setApiRequest(processTxn, levelAuditTxn);
-    setApiResponse(processTxn, levelAuditTxn);
-    processCardFeatures(processTxn, auditCollectorRO, levelAuditTxn);
-    setResponseCodes(processTxn, levelAuditTxn);
+    BigDecimal stateTax;
 
-    processTxn.setDowngradeReason(downgradeReason);
-    return processTxn;
-}
-
-private void setShippingDetails(Level2And3ProcessTransaction processTxn,
-                                LevelAuditTxn levelAuditTxn) {
-
-    if (Objects.nonNull(levelAuditTxn.getShipTo())) {
-        processTxn.setShipToPostalCode(levelAuditTxn.getShipTo().getAddress().getZip());
-        processTxn.setShipToState(levelAuditTxn.getShipTo().getAddress().getState());
+    if (levelEligibility.isPresent()) {
+        LOGGER.debug("Not a Level Processing request. Follow standard processing.");
+        return levelProcessingOptionalData;
     }
-}
-private void setApiRequest(Level2And3ProcessTransaction processTxn,
-                           LevelAuditTxn levelAuditTxn) {
 
-    if (Objects.nonNull(levelAuditTxn.getRequest())) {
-        processTxn.setApiRequest(
-                loggingUtil.getObfuscatedJsonObject(levelAuditTxn.getRequest()));
+    var level = levelEligibility.get();
+    var levelProcessingData = new LevelProcessingData();
+    levelProcessingData.setPurchasingLevel(level.toString());
+    levelProcessingData.setChannel(levelProcessingRequest.getChannel());
+
+    var levelProcessingAMSData = levelProcessingData.getLevelProcessingAMSData();
+
+    if (isLevel2(level)) {
+        stateTax = getStateTaxForLevel2(
+                levelProcessingRequest, levelProcessingData, levelProcessingAMSData);
+        handleLevel2(stateTax, level, levelProcessingAMSData);
+    } else if (isLevel3(level)) {
+        handleLevel3(
+                levelProcessingRequest, levelProcessingData, levelProcessingAMSData);
     }
+
+    setupLevelProcessTxnObject(level, levelProcessingAMSData);
+    return Optional.of(levelProcessingData);
 }
 
-private void setApiResponse(Level2And3ProcessTransaction processTxn,
-                            LevelAuditTxn levelAuditTxn) {
+private void handleLevel2(BigDecimal stateTax,
+                          Long level,
+                          LevelProcessingAMSData levelProcessingAMSData) {
 
-    if (Objects.nonNull(levelAuditTxn.getResponse())) {
-        processTxn.setApiResponse(
-                loggingUtil.getObfuscatedJsonObject(levelAuditTxn.getResponse()));
-    }
-}
-private void processCardFeatures(Level2And3ProcessTransaction processTxn,
-                                 AuditCollectorRO auditCollectorRO,
-                                 LevelAuditTxn levelAuditTxn) {
-
-    CardFeatures cardFeatures = levelAuditTxn.getCardFeatures();
-    if (Objects.isNull(cardFeatures)) {
+    if (Objects.isNull(stateTax)) {
+        if (levelProcessingAMSData.getDowngradeReason().isPresent()) {
+            levelProcessingAMSData.setDowngradeReason(
+                    Optional.of("StateTax not available in AccountManagementService."));
+        }
         return;
     }
 
-    auditCollectorRO.setAffluenceIndicator(
-            toChar(cardFeatures.getAffluenceIndicator()));
-
-    if (!IPConstants.SUCCESS_REASON_CODE.equals(levelAuditTxn.getReasonCode())) {
-        processTxn.setApiErrorCode(String.valueOf(levelAuditTxn.getReasonCode()));
-        processTxn.setApiErrorText(levelAuditTxn.getReasonMessage());
+    if (stateTax.compareTo(BigDecimal.ZERO) > 0) {
+        levelProcessingAMSData.setLevelEnabled(true);
+        levelProcessingAMSData.setStateTaxAmount(stateTax);
+    } else {
+        levelProcessingAMSData.setDowngradeReason(
+                Optional.of("Negative tax amount in AMS. Downgraded to standard"));
     }
-
-    auditCollectorRO.setCardCommercial(toChar(cardFeatures.getCardCommercial()));
-    auditCollectorRO.setCardHealthCare(toChar(cardFeatures.getCardHealthCare()));
-    auditCollectorRO.setCardIssuerCountry(toChar(cardFeatures.getCardIssuerCountry()));
-    auditCollectorRO.setCardLevel3Eligible(toChar(cardFeatures.getCardLevel3Eligible()));
-    auditCollectorRO.setCardPayroll(toChar(cardFeatures.getCardPayroll()));
-    auditCollectorRO.setCardPinlessDebit(toChar(cardFeatures.getCardPinlessDebit()));
-    auditCollectorRO.setCardPrepaid(toChar(cardFeatures.getCardPrepaid()));
-    auditCollectorRO.setCardRegulated(toChar(cardFeatures.getCardRegulated()));
-    auditCollectorRO.setCardSignatureDebit(toChar(cardFeatures.getCardSignatureDebit()));
 }
-private void setResponseCodes(Level2And3ProcessTransaction processTxn,
-                              LevelAuditTxn levelAuditTxn) {
+private void handleLevel3(LevelProcessingRequest levelProcessingRequest,
+                          LevelProcessingData levelProcessingData,
+                          LevelProcessingAMSData levelProcessingAMSData) {
 
-    if (StringUtils.isNotBlank(levelAuditTxn.getProcessorResponseCode())) {
-        processTxn.setProcessorResponseCode(
-                levelAuditTxn.getProcessorResponseCode());
-        return;
+    levelProcessingData.setStateTaxAmount(BigDecimal.ZERO);
+
+    Address address =
+            amsAdapter.getAddressFromQueryBillingArrangement(
+                    levelProcessingRequest.getBillingArrangementId(),
+                    Boolean.TRUE.equals(levelProcessingRequest.getLevelProcessing()),
+                    levelProcessingAMSData);
+
+    if (isValidAddress(address)) {
+        levelProcessingData.setLevelEnabled(true);
+        levelProcessingData.setState(address.getState());
+        levelProcessingData.setZipCode(address.getZipCode());
+        levelProcessingData.setPsCode(address.getPsCode());
+
+        var channel = channelLevelPropertiesDao
+                .getChannelLevelProperties(levelProcessingRequest.getChannel());
+        levelProcessingData.setCommodityCode(channel.getCommodityCode());
+    } else {
+        levelProcessingAMSData.setDowngradeReason(
+                Optional.of("Call to AccountManagementService failed or address or PsCode not returned in AMS"));
     }
-
-    if (StringUtils.isNotBlank(levelAuditTxn.getCaptureResponseCode())) {
-        processTxn.setProcessorResponseCode(
-                levelAuditTxn.getCaptureResponseCode());
-    }
-
-    processTxn.setLevel3Enabled(
-            toChar(levelAuditTxn.getPurchasingLevel3Enabled()));
 }
-private Character toChar(String value) {
-    return StringUtils.isNotEmpty(value) ? value.charAt(0) : null;
+
+private boolean isLevel2(Long level) {
+    return Long.valueOf(PaymentServiceConstants.LEVEL_2).equals(level);
+}
+
+private boolean isLevel3(Long level) {
+    return Long.valueOf(PaymentServiceConstants.LEVEL_3).equals(level);
+}
+
+private boolean isValidAddress(Address address) {
+    return address != null
+            && StringUtils.isNotEmpty(address.getState())
+            && StringUtils.isNotEmpty(address.getZipCode())
+            && StringUtils.isNotEmpty(address.getPsCode());
 }
