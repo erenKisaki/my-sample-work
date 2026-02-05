@@ -7,11 +7,10 @@
         }
 
         // Stream-based validation
-        return Stream.of(token)
+        boolean isTokenRegexMatches =  Stream.of(token)
                 .allMatch(StringUtils::isNotBlank)
                 && tokenRegexPatterns.stream()
                         .filter(StringUtils::isNotBlank)
                         .map(Pattern::compile)
                         .anyMatch(pattern ->
-                                pattern.matcher(token).find()
-                        );
+                                pattern.matcher(token).find());
