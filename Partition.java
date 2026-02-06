@@ -1,17 +1,34 @@
+
 private int getStatusByReAuthAttempt(int value) {
-    Map<String, Integer> recurringPaymentStatusMap =
+    Map<String, Integer> statusMap =
             BatchPaymentWorkListUtil.getRecurringStatusMap();
 
-    if (recurringPaymentStatusMap == null || recurringPaymentStatusMap.isEmpty()) {
+    if (statusMap == null || statusMap.isEmpty()) {
         return 99;
     }
 
-    String suffix = String.valueOf(value);
-
-    return recurringPaymentStatusMap.entrySet()
+    return statusMap.entrySet()
             .stream()
-            .filter(entry -> StringUtils.endsWith(entry.getKey(), suffix))
+            .filter(entry -> isExactReauthMatch(entry.getKey(), value))
             .map(Map.Entry::getValue)
             .findFirst()
             .orElse(99);
+}
+
+private boolean isExactReauthMatch(String key, int value) {
+    if (StringUtils.isBlank(key)) {
+        return false;
+    }
+
+    int underscoreIndex = key.lastIndexOf('_');
+    if (underscoreIndex < 0 || underscoreIndex == key.length() - 1) {
+        return false;
+    }
+
+    try {
+        int attempt = Integer.parseInt(key.substring(underscoreIndex + 1));
+        return attempt == value;
+    } catch (NumberFormatException ex) {
+        return false;
+    }
 }
