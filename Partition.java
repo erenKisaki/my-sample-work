@@ -1,4 +1,4 @@
 var tokenRegexPatterns =
         Optional.ofNullable(configuration)
-            .map(c -> c.getStringList("app.xbucks.token.regex"))
+            .map(c -> configuration.getStringList("app.xbucks.token.regex"))
             .orElse(Collections.emptyList());
