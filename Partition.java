@@ -1,5 +1,3 @@
-String expDate = Stream.of(str1, str2)
-        .filter(Objects::nonNull)
-        .collect(Collectors.joining());
-
-expDate = expDate.isEmpty() ? null : expDate;
+var networkMonth = 
+var networkYear = 
+String expDate = (StringUtils.isNotEmpty(networkMonth) &&  StringUtils.isNotEmpty(networkYear)) ? (networkMonth + networkYear) : null;
