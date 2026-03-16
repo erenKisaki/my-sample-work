@@ -1,46 +1,57 @@
-public boolean shouldRetry() {
+public boolean isEligibleForRetry(ResponseEntity<String> responseEntity) {
+
+    boolean retryEnabled =
+            configuration.getBoolean(CPX_INTERNAL_RETRY_ENABLEMENT_KEY + endpointClientKey);
+
+    String[] retryEnabledOperations =
+            configuration.getStringArray(CPX_INTERNAL_RETRY_ENABLEMENT_KEY + endpointClientKey
+                    + CPX_INTERNAL_RETRY_CHASE_OPERATIONS);
+
+    String[] errorMessages =
+            configuration.getStringArray(CPX_INTERNAL_RETRY_ENABLEMENT_KEY + endpointClientKey
+                    + CPX_INTERNAL_RETRY_CHASE_ERROR_MESSAGES);
+
+    String[] reasonMessages =
+            configuration.getStringArray(CPX_INTERNAL_RETRY_ENABLEMENT_KEY + endpointClientKey
+                    + CPX_INTERNAL_RETRY_CHASE_REASON_MESSAGES);
+
+    String fallbackClientKey =
+            configuration.getString(CPX_INTERNAL_RETRY_ENABLEMENT_KEY + endpointClientKey
+                    + CPX_INTERNAL_RETRY_CHASE_FALLBACK);
+
+    if (!retryEnabled
+            || ArrayUtils.isEmpty(retryEnabledOperations)
+            || ArrayUtils.isEmpty(errorMessages)
+            || ArrayUtils.isEmpty(reasonMessages)
+            || StringUtils.isBlank(fallbackClientKey)) {
+        return false;
+    }
 
     if (responseEntity == null || responseEntity.getBody() == null) {
         return false;
     }
 
-    int statusCode = responseEntity.getStatusCodeValue();
-
     JsonObject jsonObject = JsonParser.parseString(responseEntity.getBody()).getAsJsonObject();
 
-    String operation = jsonObject.has("operation")
-            ? jsonObject.get("operation").getAsString()
-            : null;
+    String operation = getJsonValue(jsonObject, "operation");
+    String errorMessage = getJsonValue(jsonObject, "error_message");
+    String reasonMessage = getJsonValue(jsonObject, "reason_message");
 
-    String errorMessage = jsonObject.has("error_message")
-            ? jsonObject.get("error_message").getAsString()
-            : null;
+    boolean eligible =
+            containsValue(operation, retryEnabledOperations)
+                    && containsValue(errorMessage, errorMessages)
+                    && containsValue(reasonMessage, reasonMessages);
 
-    String reasonMessage = jsonObject.has("reason_message")
-            ? jsonObject.get("reason_message").getAsString()
-            : null;
-
-    if (!containsValue(operation, operations)) {
-        return false;
+    if (eligible) {
+        LOGGER.info("CPX retry is enabled for endpointClientKey: {} and errorMessage: {}",
+                endpointClientKey, responseEntity.getBody());
     }
 
-    if (statusCode != 200) {
-        return containsValue(errorMessage, errorMessages);
-    }
-
-    if (statusCode == 200) {
-        return containsValue(reasonMessage, reasonMessages);
-    }
-
-    return false;
+    return eligible;
 }
 
-private boolean containsValue(String value, String[] configValues) {
-
-    if (value == null || configValues == null) {
-        return false;
-    }
-
-    return Arrays.stream(configValues)
-            .anyMatch(config -> config.equalsIgnoreCase(value.trim()));
+private String getJsonValue(JsonObject jsonObject, String key) {
+    return jsonObject.has(key) && !jsonObject.get(key).isJsonNull()
+            ? jsonObject.get(key).getAsString()
+            : null;
 }
