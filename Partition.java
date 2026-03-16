@@ -21,13 +21,9 @@ public boolean isEligibleForRetry(ResponseEntity<String> responseEntity) {
 
     if (!retryEnabled
             || ArrayUtils.isEmpty(retryEnabledOperations)
-            || ArrayUtils.isEmpty(errorMessages)
-            || ArrayUtils.isEmpty(reasonMessages)
-            || StringUtils.isBlank(fallbackClientKey)) {
-        return false;
-    }
-
-    if (responseEntity == null || responseEntity.getBody() == null) {
+            || StringUtils.isBlank(fallbackClientKey)
+            || responseEntity == null
+            || responseEntity.getBody() == null) {
         return false;
     }
 
@@ -37,21 +33,27 @@ public boolean isEligibleForRetry(ResponseEntity<String> responseEntity) {
     String errorMessage = getJsonValue(jsonObject, "error_message");
     String reasonMessage = getJsonValue(jsonObject, "reason_message");
 
-    boolean eligible =
-            containsValue(operation, retryEnabledOperations)
-                    && containsValue(errorMessage, errorMessages)
-                    && containsValue(reasonMessage, reasonMessages);
+    if (!containsValue(operation, retryEnabledOperations)) {
+        return false;
+    }
+
+    int statusCode = responseEntity.getStatusCodeValue();
+
+    boolean eligible;
+
+    if (statusCode != 200) {
+        eligible = containsValue(errorMessage, errorMessages);
+    } else {
+        eligible = containsValue(reasonMessage, reasonMessages);
+    }
 
     if (eligible) {
-        LOGGER.info("CPX retry is enabled for endpointClientKey: {} and errorMessage: {}",
-                endpointClientKey, responseEntity.getBody());
+        LOGGER.info(
+                "CPX retry triggered for endpointClientKey: {}, status: {}, response: {}",
+                endpointClientKey,
+                statusCode,
+                responseEntity.getBody());
     }
 
     return eligible;
-}
-
-private String getJsonValue(JsonObject jsonObject, String key) {
-    return jsonObject.has(key) && !jsonObject.get(key).isJsonNull()
-            ? jsonObject.get(key).getAsString()
-            : null;
 }
