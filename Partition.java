@@ -1,10 +1,1 @@
-Optional.ofNullable(keywords)
-        .map(Arrays::stream)
-        .orElseGet(Stream::empty)
-        .filter(Objects::nonNull)
-        .map(String::trim)
-        .filter(s -> !s.isEmpty())
-        .anyMatch(k -> Optional.ofNullable(input)
-                .map(String::toLowerCase)
-                .orElse("")
-                .contains(k.toLowerCase()));
+By.xpath("//div[contains(text(),'Application')]/following::select[1]")
