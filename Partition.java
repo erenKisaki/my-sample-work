@@ -1,3 +1,1 @@
-ResponseEntity
-        .status(status != null ? status : HttpStatus.INTERNAL_SERVER_ERROR)
-        .build();
+.status(HttpStatusCode.valueOf(Integer.parseInt(httpStatus)))
