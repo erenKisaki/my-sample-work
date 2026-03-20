@@ -13,28 +13,36 @@ public void selectApplicationDropDownValue(String value) throws Throwable {
 
         List<WebElement> rows = driver.findElements(By.xpath("//*[@id='userform:table01']/tbody/tr"));
 
-        for (int i = 2; i <= rows.size(); i++) {
+        for (int i = 1; i <= rows.size(); i++) {
 
+            // ✅ Check if row already has Application value (SAA etc.)
+            List<WebElement> appText = driver.findElements(
+                By.xpath("//*[@id='userform:table01']/tbody/tr[" + i + "]/td[1][not(select)]")
+            );
+
+            // 👉 If td has text (means already filled row) → skip
+            if (!appText.isEmpty() && !appText.get(0).getText().trim().isEmpty()) {
+                continue;
+            }
+
+            // ✅ Now find dropdown in that row
             By dynamicDropdown = By.xpath("//*[@id='userform:table01']/tbody/tr[" + i + "]/td[1]/select");
 
-            WebElement dropdown = driver.findElement(dynamicDropdown);
-            Select select = new Select(dropdown);
+            List<WebElement> dropdowns = driver.findElements(dynamicDropdown);
 
-            String selectedText = select.getFirstSelectedOption().getText();
+            if (!dropdowns.isEmpty()) {
 
-            if (selectedText.equalsIgnoreCase("Please Select")) {
-
-                // 🔥 reuse your existing methods
                 SupportFunctions.scrollIntoView(driver, dynamicDropdown);
                 SupportFunctions.selectFromDropdownByVisibleText(driver, dynamicDropdown, drpdownValue);
 
-                return; // stop after selecting first empty row
+                return; // ✅ stop after first empty row
             }
         }
 
-        throw new RuntimeException("No empty dropdown available");
+        throw new RuntimeException("No empty row found to select dropdown");
 
     } catch (Exception e) {
         SupportFunctions.logFailExtentWithScreenShot("Unable to Select Action value: " + value);
+        throw e;
     }
 }
