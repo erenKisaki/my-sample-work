@@ -1,48 +1,58 @@
-public void selectApplicationDropDownValue(String value) throws Throwable {
+public int getAvailableRow() {
+
+    List<WebElement> rows = driver.findElements(
+        By.xpath("//*[@id='userform:table01']/tbody/tr")
+    );
+
+    for (int i = 1; i <= rows.size(); i++) {
+
+        // ✅ Row is available if dropdown exists
+        List<WebElement> dropdown = driver.findElements(
+            By.xpath("//*[@id='userform:table01']/tbody/tr[" + i + "]/td[1]/select")
+        );
+
+        if (!dropdown.isEmpty()) {
+            return i;
+        }
+    }
+
+    throw new RuntimeException("No available row found");
+}
+
+public void enterLocalUID() throws Throwable {
     try {
 
-        String drpdownValue = switch (value) {
-            case "SAA" -> propertiesValidationLabelUMS.getProperty("global.label.application.SAA");
-            case "BESS" -> propertiesValidationLabelUMS.getProperty("global.label.application.BESS");
-            case "VMWARE_ADMIN" -> propertiesValidationLabelUMS.getProperty("global.label.application.VMWARE_ADMIN");
-            case "BESS_TANDEM_ADMIN" -> propertiesValidationLabelUMS.getProperty("global.label.application.BESS_TANDEM_ADMIN");
-            case "OTHERS" -> propertiesValidationLabelUMS.getProperty("global.label.application.OTHERS");
-            case "GTX" -> propertiesValidationLabelUMS.getProperty("global.label.application.GTX");
-            default -> null;
-        };
+        int row = getAvailableRow(); // ✅ SAME logic
 
-        List<WebElement> rows = driver.findElements(By.xpath("//*[@id='userform:table01']/tbody/tr"));
+        String localUID = config.getProperty("NewSID");
 
-        for (int i = 1; i <= rows.size(); i++) {
+        By inputField = By.xpath(
+            "//*[@id='userform:table01']/tbody/tr[" + row + "]/td[2]/input"
+        );
 
-            // ✅ Check if row already has Application value (SAA etc.)
-            List<WebElement> appText = driver.findElements(
-                By.xpath("//*[@id='userform:table01']/tbody/tr[" + i + "]/td[1][not(select)]")
-            );
+        SupportFunctions.clear(driver, inputField);
+        SupportFunctions.enterText(driver, localUID, inputField);
 
-            // 👉 If td has text (means already filled row) → skip
-            if (!appText.isEmpty() && !appText.get(0).getText().trim().isEmpty()) {
-                continue;
-            }
-
-            // ✅ Now find dropdown in that row
-            By dynamicDropdown = By.xpath("//*[@id='userform:table01']/tbody/tr[" + i + "]/td[1]/select");
-
-            List<WebElement> dropdowns = driver.findElements(dynamicDropdown);
-
-            if (!dropdowns.isEmpty()) {
-
-                SupportFunctions.scrollIntoView(driver, dynamicDropdown);
-                SupportFunctions.selectFromDropdownByVisibleText(driver, dynamicDropdown, drpdownValue);
-
-                return; // ✅ stop after first empty row
-            }
-        }
-
-        throw new RuntimeException("No empty row found to select dropdown");
+        SupportFunctions.logInfoExtentWithScreenShotWithElement(
+            "Entering LocalUID - " + localUID,
+            inputField
+        );
 
     } catch (Exception e) {
-        SupportFunctions.logFailExtentWithScreenShot("Unable to Select Action value: " + value);
+        SupportFunctions.logFailExtentWithScreenShot("Unable to enter LocalUID");
         throw e;
     }
+}
+
+public boolean validateLocalUIDTextField() {
+
+    int row = getAvailableRow();
+
+    By inputField = By.xpath(
+        "//*[@id='userform:table01']/tbody/tr[" + row + "]/td[2]/input"
+    );
+
+    String value = driver.findElement(inputField).getAttribute("value");
+
+    return value == null || value.trim().isEmpty();
 }
