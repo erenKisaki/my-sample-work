@@ -1,58 +1,67 @@
-public int getAvailableRow() {
-
-    List<WebElement> rows = driver.findElements(
-        By.xpath("//*[@id='userform:table01']/tbody/tr")
-    );
-
-    for (int i = 1; i <= rows.size(); i++) {
-
-        // ✅ Row is available if dropdown exists
-        List<WebElement> dropdown = driver.findElements(
-            By.xpath("//*[@id='userform:table01']/tbody/tr[" + i + "]/td[1]/select")
-        );
-
-        if (!dropdown.isEmpty()) {
-            return i;
-        }
-    }
-
-    throw new RuntimeException("No available row found");
-}
-
-public void enterLocalUID() throws Throwable {
-    try {
-
-        int row = getAvailableRow(); // ✅ SAME logic
-
-        String localUID = config.getProperty("NewSID");
-
-        By inputField = By.xpath(
-            "//*[@id='userform:table01']/tbody/tr[" + row + "]/td[2]/input"
-        );
-
-        SupportFunctions.clear(driver, inputField);
-        SupportFunctions.enterText(driver, localUID, inputField);
-
-        SupportFunctions.logInfoExtentWithScreenShotWithElement(
-            "Entering LocalUID - " + localUID,
-            inputField
-        );
-
-    } catch (Exception e) {
-        SupportFunctions.logFailExtentWithScreenShot("Unable to enter LocalUID");
-        throw e;
-    }
-}
-
-public boolean validateLocalUIDTextField() {
+public boolean isAuthenticationMechanismDrpDwnDisplayed() {
 
     int row = getAvailableRow();
 
-    By inputField = By.xpath(
-        "//*[@id='userform:table01']/tbody/tr[" + row + "]/td[2]/input"
+    By dynamicDrpDwn = By.xpath(
+        "//*[@id='userform:table01']/tbody/tr[" + row + "]/td[3]/select"
     );
 
-    String value = driver.findElement(inputField).getAttribute("value");
+    return SupportFunctions.isDisplayed(driver, dynamicDrpDwn);
+}
 
-    return value == null || value.trim().isEmpty();
+public boolean validateAuthenticationMechanismDrpDwn() throws Throwable {
+
+    int row = getAvailableRow();
+
+    By dynamicDrpDwn = By.xpath(
+        "//*[@id='userform:table01']/tbody/tr[" + row + "]/td[3]/select"
+    );
+
+    SupportFunctions.click(driver, dynamicDrpDwn);
+
+    SupportFunctions.logInfoExtentWithScreenShotWithElement(
+        "Validating values from Action dropdown",
+        dynamicDrpDwn
+    );
+
+    SupportFunctions.fetchAndValidateDropdownValues(
+        driver,
+        dynamicDrpDwn,
+        propertiesValidationLabelUMS.getProperty("authenticationMechanismDrpDwn1")
+    );
+    return true;
+}
+
+public void selectAuthMechanismDropDownValue(String value) throws Throwable {
+    try {
+
+        int row = getAvailableRow();
+
+        By dynamicDrpDwn = By.xpath(
+            "//*[@id='userform:table01']/tbody/tr[" + row + "]/td[3]/select"
+        );
+
+        SupportFunctions.scrollIntoView(driver, dynamicDrpDwn);
+
+        String dropdownValue = value.contains("OTP Token")
+            ? propertiesValidationLabelUMS.getProperty("authenticationMechanismDrpDwn1")
+            : null;
+
+        SupportFunctions.selectFromDropdownByVisibleText(
+            driver,
+            dynamicDrpDwn,
+            dropdownValue
+        );
+
+        SupportFunctions.logInfoExtentWithScreenShotWithElement(
+            "Selecting a value from dropdown",
+            dynamicDrpDwn
+        );
+
+    } catch (Exception e) {
+        SupportFunctions.logFailExtentWithScreenShot(
+            "Unable to Select Action value: " + value
+        );
+        throw e;
+    }
 }
