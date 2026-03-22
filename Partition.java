@@ -1,67 +1,32 @@
-public boolean isAuthenticationMechanismDrpDwnDisplayed() {
+public boolean isPencilIconDisplayed() {
 
     int row = getAvailableRow();
 
-    By dynamicDrpDwn = By.xpath(
-        "//*[@id='userform:table01']/tbody/tr[" + row + "]/td[3]/select"
+    By dynamicPencilIcon = By.xpath(
+        "//*[@id='userform:table01']/tbody/tr[" + row + "]/td[4]/span/a"
     );
 
-    return SupportFunctions.isDisplayed(driver, dynamicDrpDwn);
+    return SupportFunctions.isDisplayed(driver, dynamicPencilIcon);
 }
 
-public boolean validateAuthenticationMechanismDrpDwn() throws Throwable {
-
-    int row = getAvailableRow();
-
-    By dynamicDrpDwn = By.xpath(
-        "//*[@id='userform:table01']/tbody/tr[" + row + "]/td[3]/select"
-    );
-
-    SupportFunctions.click(driver, dynamicDrpDwn);
-
-    SupportFunctions.logInfoExtentWithScreenShotWithElement(
-        "Validating values from Action dropdown",
-        dynamicDrpDwn
-    );
-
-    SupportFunctions.fetchAndValidateDropdownValues(
-        driver,
-        dynamicDrpDwn,
-        propertiesValidationLabelUMS.getProperty("authenticationMechanismDrpDwn1")
-    );
-    return true;
-}
-
-public void selectAuthMechanismDropDownValue(String value) throws Throwable {
+public void clickPencilIconButton() throws Throwable {
     try {
 
         int row = getAvailableRow();
 
-        By dynamicDrpDwn = By.xpath(
-            "//*[@id='userform:table01']/tbody/tr[" + row + "]/td[3]/select"
+        By dynamicPencilIcon = By.xpath(
+            "//*[@id='userform:table01']/tbody/tr[" + row + "]/td[4]/span/a"
         );
 
-        SupportFunctions.scrollIntoView(driver, dynamicDrpDwn);
-
-        String dropdownValue = value.contains("OTP Token")
-            ? propertiesValidationLabelUMS.getProperty("authenticationMechanismDrpDwn1")
-            : null;
-
-        SupportFunctions.selectFromDropdownByVisibleText(
-            driver,
-            dynamicDrpDwn,
-            dropdownValue
-        );
+        SupportFunctions.click(driver, dynamicPencilIcon);
 
         SupportFunctions.logInfoExtentWithScreenShotWithElement(
-            "Selecting a value from dropdown",
-            dynamicDrpDwn
+            "Clicking pencilIcon",
+            dynamicPencilIcon
         );
 
     } catch (Exception e) {
-        SupportFunctions.logFailExtentWithScreenShot(
-            "Unable to Select Action value: " + value
-        );
+        SupportFunctions.logFailExtentWithScreenShot("Unable to click pencil button");
         throw e;
     }
 }
