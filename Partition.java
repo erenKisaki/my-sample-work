@@ -1,10 +1,8 @@
-ZoneId zone = ZoneId.systemDefault();
-
-reAuthDate.setTime(
-    reAuthDate.toInstant()
-        .atZone(zone)
-        .toLocalDate()
-        .atStartOfDay(zone)
-        .toInstant()
-        .toEpochMilli()
+ps.setString(index++, 
+    paymentGatewayTransactions.isNetworkTokenIndicator() ? "TRUE" : "FALSE"
 );
+
+String ntIndicator = rs.getString("NT_INDICATOR");
+
+boolean isNtIndicator = "TRUE".equalsIgnoreCase(ntIndicator);
+pymtGtwyTxn.setNetworkTokenIndicator(isNtIndicator);
