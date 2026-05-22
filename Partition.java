@@ -1,11 +1,38 @@
-// Username
-driver.findElement(By.xpath("//input[@id='input-user-name']")).sendKeys("sample");
+@Test
+    public void webhookIsFromUnknownSource_shouldReturnError() throws Exception {
+        var headers = createSecureHeaders("channel", "FUSION");
+        headers.add("plaid-verification",
+                "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...");
 
-// Password
-driver.findElement(By.xpath("//input[@id='input-password-login']")).sendKeys("password");
+        var request = new WebhookVerificationRequest();
+        var entity = new HttpEntity<>(request, headers);
 
-// Token value
-driver.findElement(By.xpath("//input[@id='input-token']")).sendKeys("123456");
+        // IMPORTANT: stub the downstream call here too,
+        // otherwise the test can fail with 500 because no mock response exists.
+        mockServer.post(and(byUri(PLAID_WEBHOOK_VERIFICATION_GET)))
+                .response(
+                        withStatusCode(500),
+                        withHeader("Content-Type", "application/json"),
+                        withBody("{\"messages\":{\"PBS-1104\":\"Webhook verification failed\"}}")
+                );
 
-// Sign in button
-driver.findElement(By.xpath("//button[@id='btn-login-pass']")).click();
+        ResponseEntity<PaymentWebhookErrorResponse> responseEntity =
+                restTemplate.exchange(
+                        WEBHOOK_VERIFICATION,
+                        HttpMethod.POST,
+                        entity,
+                        PaymentWebhookErrorResponse.class
+                );
+
+        assertNotNull(responseEntity);
+        assertTrue(
+                responseEntity.getStatusCode() == HttpStatus.BAD_REQUEST ||
+                responseEntity.getStatusCode() == HttpStatus.INTERNAL_SERVER_ERROR
+        );
+        assertNotNull(responseEntity.getBody());
+        assertNotNull(responseEntity.getBody().getMessages());
+        assertTrue(responseEntity.getBody().getMessages().containsKey("PBS-1104"));
+
+        hit.verify(byUri(PLAID_WEBHOOK_VERIFICATION_GET), once());
+        hit.verify(unexpected(), never());
+    }
