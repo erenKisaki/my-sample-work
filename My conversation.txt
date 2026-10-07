@@ -1,0 +1,95 @@
+00:00:00,900 --> 00:00:14,360 [Speaker 0]
+[background noise] 
+
+00:00:25,460 --> 00:00:27,120 [Speaker 0]
+So you don't have to change the file. 
+
+00:00:30,240 --> 00:00:33,800 [Speaker 0]
+It's not in the file. Changes, changes are required. 
+
+00:00:39,680 --> 00:00:44,980 [Speaker 0]
+The way it works, we get the file in Lambda, like 
+
+00:00:46,420 --> 00:01:04,560 [Speaker 0]
+Lambda, which uses this file library. It reads the file and it creates different chunk files. Then from the chunk file, a dynamic record is created. That is, the chunk file is processed by the order Lambda. Okay. This 
+
+00:01:08,120 --> 00:01:12,600 [Speaker 0]
+is where you need to define all the 
+
+00:01:14,020 --> 00:01:22,520 [Speaker 0]
+values like here. For example, the header, because header, the is getting that data from the header, right? Yes, yes. So, 
+
+00:01:24,440 --> 00:01:34,440 [Speaker 0]
+from the header, you can see we have this file header. And here what we are putting, we are putting first the NSCC ID, right? The NSCC ID. 
+
+00:01:57,580 --> 00:01:58,420 [Speaker 0]
+File type. File type. 
+
+00:02:00,060 --> 00:02:14,500 [Speaker 0]
+Then beneficiary account number. So this is the beneficiary account number is this one. Beneficiary reference number is this Benin name. Then beneficiary residence is this one. 
+
+00:02:17,780 --> 00:02:21,060 [Speaker 0]
+Beneficiary account number is the beneficiary account number. 
+
+00:02:22,440 --> 00:02:24,120 [Speaker 0]
+Then beneficiary name. 
+
+00:02:28,900 --> 00:02:38,080 [Speaker 0]
+Beneficiary reference number, so which is the input. This is the beneficiary account number in the . It is just reached, I think. Maybe, I don't 
+
+00:02:39,480 --> 00:02:52,420 [Speaker 0]
+know. Anyhow, but then beneficiary reference is the Benin name, and that's what it is here, right? Then, then new beneficiary bank reference is the last one, which would be the Benin reference. 
+
+00:02:55,540 --> 00:02:56,780 [Speaker 0]
+Yeah, Benin bank reference. 
+
+00:03:02,160 --> 00:03:05,860 [Speaker 0]
+bank reference. Bank reference is Benin bank reference. 
+
+00:03:11,200 --> 00:03:17,340 [Speaker 0]
+So this is from beneficiary account number. And beneficiary name. 
+
+00:03:35,660 --> 00:03:35,740 [Speaker 0]
+So 
+
+00:03:38,120 --> 00:03:42,080 [Speaker 0]
+it gets the file and then it creates a chunk- Chunks files. -go into the source. Yeah. 
+
+00:04:05,780 --> 00:04:09,340 [Speaker 0]
+It creates the state, state, state file. It's a CSV file. 
+
+00:04:12,240 --> 00:04:13,900 [Speaker 0]
+It's still a CSV. 
+
+00:04:32,780 --> 00:04:33,060 [Speaker 0]
+Yeah. 
+
+00:06:10,620 --> 00:06:14,440 [Speaker 0]
+So yeah [clearing throat], so this is where you need to modify. 
+
+00:06:32,800 --> 00:06:47,020 [Speaker 0]
+Yeah. So you'll be creating, you'll be creating two attributes, like- Okay. -in a copy-paste. Just remove the start index and index. You don't need that. Yeah, okay. Put the variable name is there in the Jira, right? Yeah. What is the attribute saying in Jira? 
+
+00:06:54,980 --> 00:07:00,640 [Speaker 0]
+Number data tran-- uh, NSSID should be added as transact NSSID. Yeah. 
+
+00:07:08,140 --> 00:07:11,760 [Speaker 0]
+Because pass additional attribute from the file. Yeah. 
+
+00:07:13,820 --> 00:07:14,200 [Speaker 0]
+So, 
+
+00:07:15,880 --> 00:07:16,240 [Speaker 0]
+that is . 
+
+00:07:19,880 --> 00:07:20,940 [Speaker 0]
+The rest of it too. 
+
+00:07:22,460 --> 00:07:38,180 [Speaker 0]
+Yeah, ABA routing number, ABA. So ABA routing number is the first one. First one, okay. And the second one is the bank account number. So these are the two which you need to add. Okay. E and F, right? The file E and F. Okay. So that's what it is. 
+
+00:07:39,780 --> 00:07:42,740 [Speaker 0]
+Okay? Okay. These are the two. So first this, second this. Okay? Yeah. 
+
+00:07:44,000 --> 00:07:44,300 [Speaker 0]
+Thank you. 
