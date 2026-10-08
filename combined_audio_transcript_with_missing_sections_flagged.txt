@@ -1,0 +1,165 @@
+COMBINED AUDIO TRANSCRIPT — COVERAGE AUDIT
+8 October 2026
+
+IMPORTANT: INCOMPLETE; DO NOT TREAT AS A VERBATIM, FULL-COVERAGE TRANSCRIPT.
+The recognizer missed substantial time ranges. Text below is the exact available automatic transcript without inventing missing words; timestamps show the starts of recognized phrases. Gap notices identify long intervals between recognition timestamps, not proof that silence occurred in the recording. The original audio shows acoustic activity within some of those gaps; without new speech recognition or human listening, words cannot be reconstructed. Speaker labels are automatic and may be inaccurate; specialist terms are unverified.
+
+SPECIFIED AUDIO SCOPE:
+- AUD-20261008-WA0006.m4a: only 00:00:00–00:10:00 (10 minutes)
+- AUD-20261008-WA0005.m4a: full 00:00:00–00:14:56.832 (approximately 14:57)
+
+============================================================================
+RECORDING 1: WA0006 — FIRST TEN MINUTES ONLY
+============================================================================
+
+[00:00:00] Is it due to pizza or?
+
+[POTENTIAL MISSING TRANSCRIPTION: 00:00 to 01:28; timestamps are starts of neighboring recognized phrases, so this is NOT a precise silence boundary.]
+
+[00:01:28] Give Aubrey a standing ovation for adding alerts
+
+[00:01:41] Give something to crack in the morning gate
+
+[00:01:46] I know, I know how little you have to do every day, so it's good you have something to do this morning
+
+[POTENTIAL MISSING TRANSCRIPTION: 01:46 to 02:29; timestamps are starts of neighboring recognized phrases, so this is NOT a precise silence boundary.]
+
+[00:02:29] I, I was expecting every time we go to them or create a ticket
+
+[00:02:52] Two sprints? Do we have like a ticket linked out to some other one?
+
+[00:02:58] Two sprints. Uh, I don't know how they are
+
+[00:03:12] I don't think it, it matters. I just noticed it starting yesterday
+
+[00:03:18] Is there any overlap because of which
+
+[00:03:25] Maybe just the-
+
+[00:03:26] Uh, did we, did we move a ticket that was in progress into a different sprint, maybe? Those, um, duplicate file scenario ones?
+
+[00:03:38] No, I mean, other sprints have zero. These have just two in the backlog. Sprint fifteen, that's it
+
+[00:03:48] Um, like I said, it does really well
+
+[00:03:50] Yeah We
+
+[00:03:50] just did
+
+[00:03:50] this yesterday We'll figure it out later. All right. So the theme for today, uh, let's break down the... So let me teach. Can I start work? Uh
+
+[POTENTIAL MISSING TRANSCRIPTION: 03:50 to 04:30; timestamps are starts of neighboring recognized phrases, so this is NOT a precise silence boundary.]
+
+[00:04:30] This is for the, uh, external site, ITWS
+
+[POTENTIAL MISSING TRANSCRIPTION: 04:30 to 05:34; timestamps are starts of neighboring recognized phrases, so this is NOT a precise silence boundary.]
+
+[00:05:34] To give you the background, let's open up their
+
+[00:05:44] So couple of things we have to do, right? IDWS is for the security, means, uh, in-- for the filter, for the re- uh, filter thing. Then another one is for, uh, crew ID, right? These two things at least I remember- Filter.
+
+[00:05:57] Oh, right.
+
+[00:05:58] Means this IDWS thing, whatever we are going to talk about, it is for that, uh, our entitlement.
+
+[00:06:03] So that's one. Other one is for the crew ID for the, uh, ETS, uh, whatever fairness request was there, right? That, uh, which you added the dependency. We have to add
+
+[00:06:14] a crew ID. Pass the... Right.
+
+[00:06:16] Yeah.
+
+[00:06:16] That is totally already taken. He is already working.
+
+[00:06:18] Okay. Yeah, he's already working. But as I re- Yeah ... uh, I told you, right, three Lambdas which we have to make-
+
+[00:06:23] Yeah
+
+[00:06:23] in this.
+
+[POTENTIAL MISSING TRANSCRIPTION: 06:23 to 07:18; timestamps are starts of neighboring recognized phrases, so this is NOT a precise silence boundary.]
+
+[00:07:18] Down. Okay. So-
+
+[00:07:20] Is it?
+
+[00:07:21] Yeah.
+
+[00:07:22] He, he gave you yesterday a new URL or something?
+
+[00:07:24] That's what I'm opening, yeah. Okay. Testing generators, but it's throwing
+
+[POTENTIAL MISSING TRANSCRIPTION: 07:24 to 08:41; timestamps are starts of neighboring recognized phrases, so this is NOT a precise silence boundary.]
+
+[00:08:41] So this is the page, uh, that we have. Uh, the-- This is an external website that all our intermediaries will be using. As they submit their transactions, they want to come into this page, and then start looking into this page, uh, get the transactions, whatever they have submitted. Mm. So you can search by FINBIN or by account.
+
+[00:09:03] And you can add the fund as optional, mm, combination. So we have basically three, four combinations here. You can just search by account or account and fund, or you can just search by FINBIN or FINBIN plus fund. So four combinations. Uh, so as they click on this,
+
+[00:09:21] mm,
+
+[00:09:22] we will be getting a call. They will be calling our API.
+
+[00:09:25] They will be passing a JWT token to us. Um, so we have to grab this information plus JWT token, and then we will be calling a firm admin API, which they have enhanced. Uh, firm admin API, uh, to retrieve the positions that a user has access to
+
+[00:09:51] Okay, he responded. Wait, wait. So it's, uh-
+
+[00:09:55] They accepted issue at theirs
+
+[00:09:57] yeah, in assuming they got the new changes in
+
+============================================================================
+RECORDING 2: WA0005 — ENTIRE RECORDING (14:57)
+============================================================================
+
+[00:00:00] Speaker 2: Like, uh, we need to add in the splitter.
+
+[POTENTIAL MISSING TRANSCRIPTION: 00:00 to 02:28; timestamps are starts of neighboring recognized phrases, so this is NOT a precise silence boundary.]
+
+[00:02:28] Speaker: Yeah. So it will middle number but it fetches the file from the SQL. Yes. And then from the SQL, but then it fetches, it fetches the-- Then you have to get the metadata- Metadata -from there, and then you will get this, uh, trading NSCCI. NSCCI. And if it is present, then you need to add as a, as a last line-
+
+[00:02:48] Speaker 2: Okay -
+
+[00:02:49] Speaker: into the file.
+
+[00:02:51] Speaker 2: Okay.
+
+[00:02:57] Speaker: Because we have done something similar with the pH. You have you opened the file lambda? This is file, this is file, this is file zero open?
+
+[00:03:10] Speaker 2: Yeah,
+
+[00:03:11] Speaker: it's open. It's, it's the source open
+
+[00:03:18] Speaker 2: Yeah, that's right
+
+[POTENTIAL MISSING TRANSCRIPTION: 03:18 to 13:32; timestamps are starts of neighboring recognized phrases, so this is NOT a precise silence boundary.]
+
+[00:13:32] Speaker: So in the sourcing file, in the metadata we are adding that
+
+[00:13:37] Speaker 2: Yeah.
+
+[00:13:38] Speaker: Yeah. Try and put them inside
+
+[00:13:40] Speaker 2: the
+
+[00:13:40] Speaker: UFO file.
+
+[00:13:41] Speaker 2: Yeah.
+
+[00:13:41] Speaker: So you'll have to add it into this, uh, uh- File file ... file here one more
+
+[00:13:50] Three three and this one will not be three again
+
+[00:13:58] Yeah. So you will have to create a new method saying that retrieve trading NSCD ID and once you get the trading NSCD ID from the metadata, then, uh, just follow this one. Yes. Okay. So we have to follow this one with the RDC number.
+
+[00:14:13] Speaker 2: Yeah.
+
+[00:14:17] Speaker: If you get any trading ID- Mm-hmm ... let, uh, add that, uh, into that last li-- every last line. Okay. Yeah.
+
+[00:14:25] Speaker 2: I'll be-
+
+[00:14:27] Speaker: Yeah. Yeah. So but only thing is in this case, file receipt number will always be there. Okay. But in our case, like NS-- trading NSCC IDs will not be there. Will not be there. It may or may not be
+
+[00:14:38] Speaker 2: optional.
+
+[00:14:39] Speaker: So yeah, so just follow this and try to do this. Yeah. Go through that code and then understand and ask me if you have any- Yeah, sure. I'll try to finish up these two. By the way, you don't need to work but understand and do follow. Yeah. Thank you.
+
+END OF RECOVERED TRANSCRIPT
