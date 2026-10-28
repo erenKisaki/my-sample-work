@@ -1,0 +1,53 @@
+Recording: AUD-20261027-WA0008.m4a
+Requested interval: 12:14.04–18:14.04 (last six minutes)
+Status: INCOMPLETE / UNVERIFIED. Two automatic transcription passes missed a long stretch of audio. These are machine-generated words, not a verified verbatim transcript. Timestamps refer to the original 18m14s recording.
+
+[12:17–12:21]
+Speaker 1: "Next one is one, um, yeah."
+
+[12:21–16:20]
+[AUDIO EXISTS BUT SPEECH WAS NOT TRANSCRIBED. NO RELIABLE WORDS AVAILABLE. DO NOT INFER THIS IS SILENCE.]
+
+[16:20–16:32]
+Speaker 1: "Then make this function call and pass it this form data and see whether it is returning you the value or not."
+
+[16:32–16:36]
+Speaker 1: "If it is empty string, then again check that data unavailable error two."
+
+[16:37–16:38]
+Speaker 2: "Two." Another speaker: "Okay."
+
+[16:38–16:44]
+Speaker 1: "Okay, because you have the valid response. You want to see the response, then again check data unavailable error two."
+
+[16:44–16:54]
+Speaker 1: "So here we will be making this function call four to four, then again data unavailable error, otherwise data available error."
+
+[17:06]
+Speaker 1: "So those things get set properly here. And then, uh..."
+
+[17:12–17:15]
+Speaker 1: "Error flag, okay, whatever it is saying. Move error to transient banking." [Technical terminology unclear; may be mistranscribed]
+
+[17:19–17:27]
+Speaker 1: "Live now... Value safety control." [Unclear audio]
+
+[17:34–17:39]
+Speaker 1: "But then there is one more Lambda, right? In this code, we do one more Lambda, transformation Lambda."
+
+[17:39–17:42]
+Speaker 2: "Transformation, we need to do it later on top of—"
+Speaker 1: "Correct. Yeah. Yeah."
+Speaker 2: "Yeah."
+
+[17:44–17:50]
+Speaker 2: "And it is the name they have suggested, so I have kept the same as—"
+Speaker 1: "Okay. That's fine."
+
+[17:50–18:14]
+[No additional words recovered by the automated transcriber; unverified whether other speech is audible.]
+
+Notes:
+- Transcript uses only words returned by a separate 6-minute transcription pass, with minimal punctuation adjustments.
+- Potentially inaccurate technical terms are left as transcribed.
+- The long gap cannot honestly be filled by guessing.
